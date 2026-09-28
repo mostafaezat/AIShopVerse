@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/AIShopVerse.AdminPanel/">
+    <Project Path="AIShopVerse.AdminPanel/AIShopVerse.AdminPanel.Server/AIShopVerse.AdminPanel.Server.csproj" />
+  </Folder>
+  <Folder Name="/AIShopVerse.EndUser/">
+    <Project Path="AIShopVerse.EndUser/AIShopVerse.EndUser.Server/AIShopVerse.EndUser.Server.csproj" />
+  </Folder>
+  <Project Path="Application/Application.csproj" />
+  <Project Path="Domain/Domain.csproj" />
+  <Project Path="Infrastructure/Infrastructure.csproj" />
+  <Project Path="Application.Tests/Application.Tests.csproj" />
+</Solution>

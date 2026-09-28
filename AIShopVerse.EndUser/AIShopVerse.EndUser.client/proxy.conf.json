@@ -1,0 +1,13 @@
+{
+  "/api": {
+    "target": "https://localhost:7125",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/notificationHub": {
+    "target": "https://localhost:7125",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true
+  }
+}

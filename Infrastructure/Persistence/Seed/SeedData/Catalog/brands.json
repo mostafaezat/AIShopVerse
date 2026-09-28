@@ -1,0 +1,72 @@
+[
+  {
+    "id": "br-001",
+    "nameEN": "Apple",
+    "nameAR": "أبل",
+    "logoUrl": "/images/brands/apple.png",
+    "description": "Innovative technology products"
+  },
+  {
+    "id": "br-002",
+    "nameEN": "Samsung",
+    "nameAR": "سامسونج",
+    "logoUrl": "/images/brands/samsung.png",
+    "description": "Electronics and mobile devices"
+  },
+  {
+    "id": "br-003",
+    "nameEN": "Nike",
+    "nameAR": "نايك",
+    "logoUrl": "/images/brands/nike.png",
+    "description": "Athletic footwear and apparel"
+  },
+  {
+    "id": "br-004",
+    "nameEN": "Adidas",
+    "nameAR": "أديداس",
+    "logoUrl": "/images/brands/adidas.png",
+    "description": "Sports and lifestyle products"
+  },
+  {
+    "id": "br-005",
+    "nameEN": "Sony",
+    "nameAR": "سوني",
+    "logoUrl": "/images/brands/sony.png",
+    "description": "Electronics, gaming, and entertainment"
+  },
+  {
+    "id": "br-006",
+    "nameEN": "Dell",
+    "nameAR": "ديل",
+    "logoUrl": "/images/brands/dell.png",
+    "description": "Computers and technology solutions"
+  },
+  {
+    "id": "br-007",
+    "nameEN": "Lenovo",
+    "nameAR": "لينوفو",
+    "logoUrl": "/images/brands/lenovo.png",
+    "description": "Personal computers and electronics"
+  },
+  {
+    "id": "br-008",
+    "nameEN": "Bosch",
+    "nameAR": "بوش",
+    "logoUrl": "/images/brands/bosch.png",
+    "description": "Home appliances and tools"
+  },
+  {
+    "id": "br-009",
+    "nameEN": "L'Oreal",
+    "nameAR": "لوريال",
+    "logoUrl": "/images/brands/loreal.png",
+    "description": "Beauty and personal care products"
+  },
+  {
+    "id": "br-010",
+    "nameEN": "LEGO",
+    "nameAR": "ليجو",
+    "logoUrl": "/images/brands/lego.png",
+    "description": "Construction toys and games"
+  }
+]

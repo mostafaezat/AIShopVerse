@@ -1,0 +1,110 @@
+[
+  {
+    "id": "cat-001",
+    "nameEN": "Electronics",
+    "nameAR": "الإلكترونيات",
+    "description": "Smartphones, laptops, tablets, and accessories",
+    "imageUrl": "/images/categories/electronics.jpg",
+    "displayOrder": 1,
+    "parentId": null
+  },
+  {
+    "id": "cat-002",
+    "nameEN": "Fashion",
+    "nameAR": "الأزياء",
+    "description": "Clothing, shoes, and accessories for men and women",
+    "imageUrl": "/images/categories/fashion.jpg",
+    "displayOrder": 2,
+    "parentId": null
+  },
+  {
+    "id": "cat-003",
+    "nameEN": "Home & Kitchen",
+    "nameAR": "المنزل والمطبخ",
+    "description": "Furniture, appliances, and home decor",
+    "imageUrl": "/images/categories/home-kitchen.jpg",
+    "displayOrder": 3,
+    "parentId": null
+  },
+  {
+    "id": "cat-004",
+    "nameEN": "Sports & Outdoors",
+    "nameAR": "الرياضه والخارج",
+    "description": "Sports equipment, fitness gear, and outdoor gear",
+    "imageUrl": "/images/categories/sports.jpg",
+    "displayOrder": 4,
+    "parentId": null
+  },
+  {
+    "id": "cat-005",
+    "nameEN": "Books",
+    "nameAR": "الكتب",
+    "description": "Fiction, non-fiction, textbooks, and ebooks",
+    "imageUrl": "/images/categories/books.jpg",
+    "displayOrder": 5,
+    "parentId": null
+  },
+  {
+    "id": "cat-006",
+    "nameEN": "Beauty & Personal Care",
+    "nameAR": "الجمال والعناية الشخصية",
+    "description": "Skincare, makeup, haircare, and fragrances",
+    "imageUrl": "/images/categories/beauty.jpg",
+    "displayOrder": 6,
+    "parentId": null
+  },
+  {
+    "id": "cat-007",
+    "nameEN": "Toys & Games",
+    "nameAR": "الألعاب والألعاب",
+    "description": "Toys, board games, and puzzles for all ages",
+    "imageUrl": "/images/categories/toys.jpg",
+    "displayOrder": 7,
+    "parentId": null
+  },
+  {
+    "id": "cat-008",
+    "nameEN": "Grocery",
+    "nameAR": "البقالة",
+    "description": "Food, beverages, and household essentials",
+    "imageUrl": "/images/categories/grocery.jpg",
+    "displayOrder": 8,
+    "parentId": null
+  },
+  {
+    "id": "cat-010",
+    "nameEN": "Smartphones",
+    "nameAR": "الهواتف الذكية",
+    "description": "Mobile phones and accessories",
+    "imageUrl": "/images/categories/smartphones.jpg",
+    "displayOrder": 1,
+    "parentId": "cat-001"
+  },
+  {
+    "id": "cat-011",
+    "nameEN": "Laptops",
+    "nameAR": "أجهزة الحاسب",
+    "description": "Notebooks, ultrabooks, and gaming laptops",
+    "imageUrl": "/images/categories/laptops.jpg",
+    "displayOrder": 2,
+    "parentId": "cat-001"
+  },
+  {
+    "id": "cat-020",
+    "nameEN": "Men's Clothing",
+    "nameAR": "ملابس رجالية",
+    "description": "Shirts, pants, jackets, and suits",
+    "imageUrl": "/images/categories/mens-clothing.jpg",
+    "displayOrder": 1,
+    "parentId": "cat-002"
+  },
+  {
+    "id": "cat-021",
+    "nameEN": "Women's Clothing",
+    "nameAR": "ملابس نسائية",
+    "description": "Dresses, tops, skirts, and more",
+    "imageUrl": "/images/categories/womens-clothing.jpg",
+    "displayOrder": 2,
+    "parentId": "cat-002"
+  }
+]

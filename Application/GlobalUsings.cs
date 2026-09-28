@@ -1,0 +1,9 @@
+global using System.ComponentModel.DataAnnotations;
+global using MediatR;
+global using Application.Base.Wrapper;
+global using Application.Base.Shared;
+global using Domain.Common;
+global using Domain.Entities.Identity;
+global using Microsoft.AspNetCore.Http;
+global using Infrastructure.Persistence.Repositories;
+global using Microsoft.EntityFrameworkCore;
