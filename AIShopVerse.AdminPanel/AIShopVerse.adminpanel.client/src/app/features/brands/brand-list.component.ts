@@ -14,6 +14,8 @@ import { BrandService } from '../../core/services/brand.service';
       <table>
         <thead><tr><th>Logo</th><th>Name (EN)</th><th>Name (AR)</th><th>Description</th><th>Active</th><th>Actions</th></tr></thead>
         <tbody>
+          <tr *ngIf="loading"><td colspan="6">Loading brands...</td></tr>
+          <tr *ngIf="!loading && loadError"><td colspan="6">Unable to load brands. <button (click)="loadBrands()">Retry</button></td></tr>
           <tr *ngFor="let brand of brands">
             <td><img [src]="brand.logoUrl || 'https://via.placeholder.com/40?text=Logo'" style="width:40px;height:40px;object-fit:contain;"></td>
             <td>{{ brand.nameEN }}</td>
@@ -27,7 +29,7 @@ import { BrandService } from '../../core/services/brand.service';
           </tr>
         </tbody>
       </table>
-      <div *ngIf="brands.length === 0">No brands found.</div>
+      <div *ngIf="!loading && !loadError && brands.length === 0">No brands found.</div>
     </div>
 
     <div *ngIf="showForm" class="modal">
@@ -40,8 +42,8 @@ import { BrandService } from '../../core/services/brand.service';
         <div *ngIf="form.id"><label><input type="checkbox" [(ngModel)]="form.isActive"> Active</label></div>
       </div>
       <div>
-        <button [disabled]="!form.nameEN" (click)="saveBrand()">Save</button>
-        <button (click)="showForm = false">Cancel</button>
+        <button [disabled]="!form.nameEN || saving" (click)="saveBrand()">{{ saving ? 'Saving...' : 'Save' }}</button>
+        <button (click)="showForm = false" [disabled]="saving">Cancel</button>
       </div>
     </div>
   `
@@ -50,13 +52,28 @@ export class BrandListComponent implements OnInit {
   brands: any[] = [];
   showForm = false;
   form: any = {};
+  loading = true;
+  loadError = false;
+  saving = false;
 
   constructor(private brandService: BrandService) {}
 
   ngOnInit() { this.loadBrands(); }
 
   loadBrands() {
-    this.brandService.getAll().subscribe(res => this.brands = res.data || []);
+    this.loading = true;
+    this.loadError = false;
+    this.brandService.getAll().subscribe({
+      next: res => {
+        this.brands = res.data || [];
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.loadError = true;
+        this.brands = [];
+      }
+    });
   }
 
   openNew() {
@@ -74,8 +91,13 @@ export class BrandListComponent implements OnInit {
   }
 
   saveBrand() {
+    if (this.saving) return;
+    const nameEN = (this.form.nameEN || '').trim();
+    const nameAR = (this.form.nameAR || '').trim();
+    if (!nameEN) { alert('English name is required.'); return; }
+    if (!nameAR) { alert('Arabic name is required.'); return; }
     const payload = {
-      nameEN: this.form.nameEN, nameAR: this.form.nameAR,
+      nameEN, nameAR,
       description: this.form.description || null, logoUrl: this.form.logoUrl || null,
       isActive: this.form.isActive
     };
@@ -83,15 +105,18 @@ export class BrandListComponent implements OnInit {
       ? this.brandService.update({ ...payload, id: this.form.id })
       : this.brandService.add(payload);
 
+    this.saving = true;
     call.subscribe({
-      next: () => { alert('Saved'); this.showForm = false; this.loadBrands(); },
-      error: () => alert('Failed to save')
+      next: () => { this.saving = false; alert('Saved'); this.showForm = false; this.loadBrands(); },
+      error: (err: any) => { this.saving = false; alert(err?.error?.message || 'Failed to save'); }
     });
   }
 
   deleteBrand(id: string) {
-    if (confirm('Delete this brand?')) {
-      this.brandService.delete(id).subscribe(() => this.loadBrands());
-    }
+    if (!confirm('Delete this brand?')) return;
+    this.brandService.delete(id).subscribe({
+      next: () => { alert('Brand deleted.'); this.loadBrands(); },
+      error: (err: any) => alert(err?.error?.message || 'Failed to delete brand')
+    });
   }
 }

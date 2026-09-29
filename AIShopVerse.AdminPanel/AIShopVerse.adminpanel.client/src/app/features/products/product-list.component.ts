@@ -21,6 +21,8 @@ import { BrandService } from '../../core/services/brand.service';
       <table>
         <thead><tr><th>Image</th><th>Name</th><th>SKU</th><th>Price</th><th>Stock</th><th>Category</th><th>Brand</th><th>Active</th><th>Actions</th></tr></thead>
         <tbody>
+          <tr *ngIf="loading"><td colspan="9">Loading products...</td></tr>
+          <tr *ngIf="!loading && loadError"><td colspan="9">Unable to load products. <button (click)="loadProducts()">Retry</button></td></tr>
           <tr *ngFor="let product of products">
             <td><img [src]="product.primaryImageUrl || 'https://via.placeholder.com/50?text=No+Image'" style="width:50px;height:50px;object-fit:contain;"></td>
             <td>{{ product.nameEN }}</td>
@@ -41,7 +43,7 @@ import { BrandService } from '../../core/services/brand.service';
           </tr>
         </tbody>
       </table>
-      <div *ngIf="!loading && products.length === 0">No products found.</div>
+      <div *ngIf="!loading && !loadError && products.length === 0">No products found.</div>
     </div>
 
     <div *ngIf="showForm" class="modal">
@@ -93,8 +95,10 @@ import { BrandService } from '../../core/services/brand.service';
         <div><label><input type="checkbox" [(ngModel)]="form.isActive"> Active (visible in storefront)</label></div>
       </div>
       <div>
-        <button (click)="saveProduct()" [disabled]="uploading">{{ uploading ? 'Uploading...' : 'Save' }}</button>
-        <button (click)="showForm = false">Cancel</button>
+        <button (click)="saveProduct()" [disabled]="uploading || saving">
+          {{ uploading ? 'Uploading...' : (saving ? 'Saving...' : 'Save') }}
+        </button>
+        <button (click)="showForm = false" [disabled]="saving">Cancel</button>
       </div>
     </div>
 
@@ -104,8 +108,8 @@ import { BrandService } from '../../core/services/brand.service';
       <div><label>Quantity change (+/-)</label><input type="number" [(ngModel)]="stockDelta"></div>
       <div><label>Reason</label><input [(ngModel)]="stockReason" placeholder="e.g. restock"></div>
       <div>
-        <button (click)="applyStock()">Apply</button>
-        <button (click)="stockProduct = null">Cancel</button>
+        <button (click)="applyStock()" [disabled]="adjusting">{{ adjusting ? 'Applying...' : 'Apply' }}</button>
+        <button (click)="stockProduct = null" [disabled]="adjusting">Cancel</button>
       </div>
     </div>
   `
@@ -116,15 +120,18 @@ export class ProductListComponent implements OnInit {
   brands: any[] = [];
   searchTerm = '';
   loading = false;
+  loadError = false;
 
   showForm = false;
   editingId: string | null = null;
   uploading = false;
+  saving = false;
   form: any = this.emptyForm();
 
   stockProduct: any = null;
   stockDelta = 0;
   stockReason = '';
+  adjusting = false;
 
   constructor(
     private productService: ProductService,
@@ -157,10 +164,18 @@ export class ProductListComponent implements OnInit {
 
   loadProducts() {
     this.loading = true;
-    this.productService.getAll(1, 50, this.searchTerm).subscribe(res => {
-      this.products = res.data?.items || [];
-      this.loading = false;
-    }, () => this.loading = false);
+    this.loadError = false;
+    this.productService.getAll(1, 50, this.searchTerm).subscribe({
+      next: res => {
+        this.products = res.data?.items || [];
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.loadError = true;
+        this.products = [];
+      }
+    });
   }
 
   openNew() {
@@ -216,9 +231,20 @@ export class ProductListComponent implements OnInit {
   }
 
   saveProduct() {
-    if (this.uploading) return;
+    if (this.uploading || this.saving) return;
+    const nameEN = (this.form.nameEN || '').trim();
+    const nameAR = (this.form.nameAR || '').trim();
+    const sku = (this.form.sku || '').trim();
+    if (!nameEN) { alert('English name is required.'); return; }
+    if (!nameAR) { alert('Arabic name is required.'); return; }
+    if (!sku) { alert('SKU is required.'); return; }
+    if (!this.form.categoryId) { alert('Please select a category.'); return; }
+    if (this.form.price == null || Number(this.form.price) <= 0) { alert('Price must be greater than 0.'); return; }
+    if (this.form.discountPrice != null && Number(this.form.discountPrice) > 0 && Number(this.form.discountPrice) >= Number(this.form.price)) {
+      alert('Discount price must be lower than the regular price.'); return;
+    }
     const payload = {
-      nameAR: this.form.nameAR, nameEN: this.form.nameEN, sku: this.form.sku,
+      nameAR, nameEN, sku,
       price: this.form.price, discountPrice: this.form.discountPrice || null,
       stockQuantity: this.form.stockQuantity,
       descriptionAR: this.form.descriptionAR, descriptionEN: this.form.descriptionEN,
@@ -232,20 +258,28 @@ export class ProductListComponent implements OnInit {
       }))
     };
 
+    this.saving = true;
     if (this.editingId) {
       this.productService.update({ ...payload, id: this.editingId }).subscribe({
         next: () => this.finishSave('Product updated'),
-        error: () => alert('Failed to update product')
+        error: (err: any) => {
+          this.saving = false;
+          alert(err?.error?.message || 'Failed to update product');
+        }
       });
     } else {
       this.productService.add(payload).subscribe({
         next: () => this.finishSave('Product added'),
-        error: () => alert('Failed to add product')
+        error: (err: any) => {
+          this.saving = false;
+          alert(err?.error?.message || 'Failed to add product');
+        }
       });
     }
   }
 
   finishSave(msg: string) {
+    this.saving = false;
     alert(msg);
     this.showForm = false;
     this.editingId = null;
@@ -259,20 +293,29 @@ export class ProductListComponent implements OnInit {
   }
 
   applyStock() {
-    if (!this.stockProduct || !this.stockDelta) return;
+    if (this.adjusting) return;
+    if (!this.stockProduct) return;
+    if (!this.stockDelta) { alert('Enter a non-zero quantity change.'); return; }
+    this.adjusting = true;
     this.productService.adjustStock(this.stockProduct.id, this.stockDelta, this.stockReason).subscribe({
       next: res => {
+        this.adjusting = false;
         alert('Stock updated to ' + res.data);
         this.stockProduct = null;
         this.loadProducts();
       },
-      error: () => alert('Failed to adjust stock')
+      error: (err: any) => {
+        this.adjusting = false;
+        alert(err?.error?.message || 'Failed to adjust stock');
+      }
     });
   }
 
   deleteProduct(id: string) {
-    if (confirm('Delete this product?')) {
-      this.productService.delete(id).subscribe(() => this.loadProducts());
-    }
+    if (!confirm('Delete this product?')) return;
+    this.productService.delete(id).subscribe({
+      next: () => { alert('Product deleted.'); this.loadProducts(); },
+      error: (err: any) => alert(err?.error?.message || 'Failed to delete product')
+    });
   }
 }

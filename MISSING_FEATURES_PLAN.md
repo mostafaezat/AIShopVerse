@@ -17,19 +17,19 @@ Status markers:
 
 Current Phase: P1
 
-Current Feature: P1-4 — Admin Expiry Worker
+Current Feature: P1-8 — UX State Pass
 
-Status: [x] Completed (backend + tests, 2026-09-27)
+Status: [x] Completed (2026-09-29)
 
-Last Completed Feature: P1-4 (Admin Expiry Worker)
+Last Completed Feature: P1-8 (UX State Pass)
 
-Next Feature: P1-5 (see P1 list below)
+Next Feature: P1 list complete (see P1 list below)
 
-Last Verification (P1-4): `dotnet build AIShopVerse.slnx` 0 warnings / 0 errors; `dotnet test` in Application.Tests 57/57 PASS (54 + 3 new ExpiredOrderProcessorTests); AdminPanel karma 25/25 + EndUser karma 68/68 (regression); `scripts\scan-secrets.ps1` exit 0
+Last Verification (P1-8): `dotnet build AIShopVerse.slnx` 0 warnings / 0 errors; `dotnet test` in Application.Tests 71/71 PASS; AdminPanel karma 25/25 + EndUser karma 68/68; `scripts\scan-secrets.ps1` exit 0
 
 Known Blockers: none
 
-Next Recommended Action: Implement P1-5 (IDOR protection).
+Next Recommended Action: Run the Mandatory Verification Before Release (npm builds for both SPAs, migration, E2E smoke).
 
 ---
 
@@ -435,14 +435,48 @@ Status: [x] Completed (2026-09-27)
 ## P1-5 IDOR Protection
 - Every cart-item operation requires `cartItem.Cart.UserId == currentUser`. Audit Get/Update/Delete/quantity/checkout + any endpoint accepting cart/cart-item ids (`UpdateCartItemCommand.cs:31-36` currently lacks ownership check). Add authz tests for another user's cart item.
 
+Status: [x] Completed (2026-09-27)
+
+- Audit result — cart surface: `GetCartQuery` (user-scoped by `UserId`, safe), `AddToCartCommand` (user-scoped cart lookup, safe), `ApplyCartCouponCommand` (user-scoped, safe), `RemoveCartItemCommand` (already had `cart.UserId == currentUser` gate), `CheckoutCommand` (user-scoped cart + current user, safe), `CartController` (only the above, no raw-id GET). **The single gap was `UpdateCartItemCommand`** (loaded cart item by id with no ownership check, then could mutate quantity/price on another user's cart item).
+- Fix: `UpdateCartItemCommand.cs` now loads the item's `Cart` by `cartItem.CartId` and rejects with `"You do not own this cart item."` (same message/pattern as `RemoveCartItemCommand`) when `cart.UserId != currentUser`, before any product/qty work.
+- Tests: `Application.Tests/CartFeatures/CartItemOwnershipTests.cs` (3): another user's cart item update rejected + quantity unchanged; owner's update succeeds (qty + DTO reflect change); another user's remove rejected + item still present. NOTE: test namespace is `Application.Tests.CartFeatures` — a `Application.Tests.Cart` namespace would shadow the `Domain.Entities.CartEntities.Cart` type for the other test files. 60/60 PASS overall.
+- Verification: slnx build 0 warnings/0 errors; Admin karma 25/25 + EndUser karma 68/68 (regression); scan script exit 0.
+
 ## P1-6 Email Provider Abstraction
 - `IEmailService` + SMTP implementation, config-driven, no hard-coded credentials, async API, clear failure handling, logging without leaking secrets, testable. Decouple business handlers from SMTP.
 
+Status: [x] Completed (2026-09-27)
+
+- Layering note: Infrastructure cannot reference Application, so the SMTP implementation lives in Application (same assembly as `IEmailService` + the old `DevEmailService`), keeping handlers decoupled. Only consumer today is `ForgotPasswordCommand` — already depends on `IEmailService`, so no handler changes were needed.
+- New types (namespace `Application.Services`):
+  - `EmailOptions` — config POCO: `Enabled`, `SmtpHost`, `SmtpPort` (default 587), `Username`, `Password`, `FromAddress`, `FromDisplayName` (default "AIShopVerse"), `UseSsl` (default true). Bound from the `Email` config section; no credentials are committed (appsettings.json ships `Enabled: false` + empty fields).
+  - `EmailMessage` — `To`/`Subject`/`Body`/`IsHtml`.
+  - `ISmtpTransport` — `SendAsync(message, options, ct)` seam so service logic is testable without a mail server.
+  - `SmtpClientTransport` — real SMTP via `System.Net.Mail.SmtpClient` (framework, no new package): only sets `NetworkCredential` when `Username` is present; `ConfigureAwait(false)`.
+  - `SmtpEmailService` — resolves options from `IConfiguration.GetSection("Email").Get<EmailOptions>()`. When disabled OR `SmtpHost`/`FromAddress` blank → logs a warning with the reset link (dev fallback, replaces old `DevEmailService` behavior) and no-ops. When enabled → delegates to `ISmtpTransport`; transport exceptions are caught, logged (host/email, never the password), and NOT propagated so the anonymous forgot-password UX never 500s.
+- Registration: `AddApplicationDependencies` now registers `ISmtpTransport → SmtpClientTransport` (singleton) and `IEmailService → SmtpEmailService` (singleton); `DevEmailService.cs` deleted.
+- Config: `Email` section added to `AIShopVerse.EndUser/appsettings.json` and `AIShopVerse.AdminPanel/appsettings.json` (disabled + empty creds). Operators enable via env vars/secrets, e.g. `Email__Enabled=true`, `Email__SmtpHost=...`; SMTP credentials are supplied only through the env-var/secret path — the committed config contains no credentials.
+- Tests: `Application.Tests/Auth/EmailServiceTests.cs` (4) with an in-memory `TestConfiguration` + fake `ISmtpTransport`: not-configured no-op fallback; enabled delegates message/options (To, subject, body link, HTML, From, port, SSL); enabled-but-host-missing no-op; transport failure caught without propagating. 64/64 PASS overall.
+
 ## P1-7 Query Optimizations
 - Only where evidence: N+1 (`GetCartDtoAsync`), full-table loads (dashboard/recommendations), missing `AsNoTracking`, pagination. No speculative changes.
+- Status: [x] Completed.
+- Evidence-based audit (before/after):
+  - Cart N+1: `GetCartQuery`, `AddToCartCommand`, `UpdateCartItemCommand` each had a private `GetCartDtoAsync` that fetched one Product/query per cart item (3 duplicate copies). Fixed with a shared `CartProjector` (`Application/Features/CartFeatures/CartProjector.cs`) that issues a single products query (`productIds.Contains(p.Id)`, with Images+Variants, `AsNoTracking`) and sets `item.UnitPrice` to the current price (behavior-preserving). `UpdateCartItemCommand` also dropped its duplicate cart load — the ownership gate (`Cart.UserId == currentUser`, P1-5) now runs on a single `.Include(c => c.Items)` load.
+  - Dashboard: `GetDashboardAnalyticsQuery` loaded ALL orders, then filtered in memory. Now `AsNoTracking` + SQL `Where(o => o.CreatedAt >= fromDate)` only when `Days.HasValue`; orderItems and low-stock queries also `AsNoTracking`.
+  - Recommendations: `GetRecommendedForUserQuery.GetPersonalizedAsync` loaded every active product with all 6 includes (Category, Parent, Brand, Attributes, Images, Variants, Reviews) to score in memory. Now a narrow candidate projection (Id, CategoryId, CategoryParentId, BrandId, StockQuantity, CreatedAt, Attributes) with signal-product exclusion pushed to SQL (`!excludeIds.Contains(p.Id)`) + `AsNoTracking`; identical scoring; only the top-N result ids are re-fetched with full includes. Signal/popular/fill queries gained `AsNoTracking`.
+  - `AsNoTracking` added where missing: `ProductDiscoveryQueries` (related + frequently-bought), `GetNewArrivalsQuery`, `GetPromotionalProductsQuery`, `GetBestSellersQuery` (products + fill).
+  - Untouched (already bounded): catalog list/search/filter, orders, inventory, reviews.
+- Test infra: `Application.Tests/TestQueryCounter.cs` (thread-safe `DbCommandInterceptor` capturing command text; `SelectCount(tableToken)` case-insensitive; `TestDb` registers it via `services.AddSingleton<IInterceptor>(...)` and exposes `QueryCounter`). `InfrastructureDependencyInjection.AddDbContext` now resolves DI-registered interceptors into the options (`AddInterceptors(provider.GetServices<IInterceptor>())`, empty in prod) so interceptors actually attach to the test context.
+- Tests: `Application.Tests/CartFeatures/CartQueryPerformanceTests.cs` (2 — single product SELECT drives a 3-item cart; AddToCart with an existing item upserts without N+1), `Application.Tests/DashboardFeatures/DashboardQueryPerformanceTests.cs` (2 — 14-day filter pushed to SQL (`[CreatedAt] >= @__...`) with 1 order/250 revenue; no-Days path returns all 2 orders/349, no `>=` in SQL), `Application.Tests/RecommendationFeatures/GetRecommendedForUserTests.cs` (3 — personalized ranking excludes signals and ranks the shared-category candidate; SQL split evidence: a narrow `[catalog].[Product]` scan with `IsActive` + `NOT IN` and no `[dbo].[Review]`, plus a top-N detail fetch WITH `[dbo].[Review]`/images/variants; cold-start falls back to Popular mode via a single bestseller query). 71/71 PASS, build 0/0, karma regressions green, secrets scan exit 0 (2026-09-29).
 
 ## P1-8 UX State Pass
 - Loading/empty/error states, validation messages, unauthorized/expired sessions, checkout/payment/stock errors, success feedback, disabled/loading buttons, duplicate-submit guards. No redesign.
+- Status: [x] Completed (2026-09-29).
+- Session expiry: both SPAs' `auth.interceptor.ts` fixed so a 401 on the retried request (or a failed/successful-but-empty refresh) calls `logout(true)` and the retried `next()` is wrapped in `catchError` — previously the second 401 escaped downstream of `catchError` with no logout/redirect. `auth.service.logout(expired = false)` clears local state before the best-effort server revocation, then navigates to `/login?sessionExpired=1` (+ `returnUrl` on EndUser) when expired. `auth.guard.ts` now passes `returnUrl`; both `login.component.ts` read `sessionExpired` and `returnUrl`. Admin `auth.interceptor.spec.ts` and EndUser `auth.interceptor.spec.ts` updated to assert logout + expired-login navigation on the second 401 (previously codified the broken no-logout behavior).
+- EndUser: `checkout` surfaces server message (`err?.error?.message`) and navigates to `/orders/:id` after success with an order-number toast (spec updated); `cart` (loading/loadError/empty gating, `processingIds` Set, `couponBusy`, invalid-qty reset); `order-history` switched to `OrderService.getHistory()` with loading/loadError; `order-detail` polling pipeline reordered to `catchError → delay → repeat` (no longer dies on first error) with loading/loadError and an `if (this.order)` status guard; `wishlist` (loading/loadError/`removingId`); `product-detail` (loading/loadError + `cartBusy`/`wishlistBusy`/`reviewBusy` guards, `(items || []).some` null guard, server messages); `product-list` (loadError + retry, inject `ToastrService` for wishlist errors, `wishlistBusy` per-id, `returnUrl` on login redirect); `home`/`product-slider` (loadError banner, per-product in-flight add-to-cart guard + server message).
+- Admin: all list/detail components gained `loading`/`loadError` + retry + gated empty rows. `order-list` (`refundingId`, `statusBusy` with status revert on error + feedback); `order-detail` (loading + loadError distinct from "Order not found.", `loadOrder()` refactor); `dashboard` (`loading`/`loadError`, `ngOnDestroy` `takeUntil` closes the SignalR `newOrder$`/`lowStock$` leak); `product-list` (`saving` guard + required-field validation (nameEN/nameAR/sku/categoryId, price > 0, discount < price) + server message + `adjusting` guard); `category-list`/`brand-list` (`saving`/`loading`/`loadError` + name-required validation); `promotion-list` (`saving`/`loading`/`loadError`/empty row + `togglingId` + code/value/percent≤100/date-range validation); `review-list` (`loading`/`loadError` + `actionId` in-flight guards + confirm-reject); `inventory` (`loading`/`loadError`/empty row + `adjustingId` guard + integer-qty validation + feedback + `ngOnDestroy` `takeUntil` for the SignalR subscription).
+- Verification: `dotnet build AIShopVerse.slnx` 0 warnings / 0 errors; `dotnet test` (Application.Tests) 71/71 PASS; EndUser karma 68/68; AdminPanel karma 25/25; `scripts\scan-secrets.ps1` exit 0 (2026-09-29).
 
 ---
 

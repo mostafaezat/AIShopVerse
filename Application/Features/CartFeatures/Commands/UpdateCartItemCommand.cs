@@ -1,7 +1,6 @@
 using Domain.Entities.CartEntities;
 using Domain.Entities.CatalogEntities;
 using Application.Features.CartFeatures.Queries;
-using Application.Services;
 
 namespace Application.Features.CartFeatures.Commands
 {
@@ -38,6 +37,7 @@ namespace Application.Features.CartFeatures.Commands
 
                 var cart = await _unitOfWork.Repository<Cart>()
                     .FindByCondition(c => c.Id == cartItem.CartId)
+                    .Include(c => c.Items)
                     .FirstOrDefaultAsync(cancellationToken);
 
                 if (cart == null || cart.UserId != _currentUserService.UserId)
@@ -78,63 +78,13 @@ namespace Application.Features.CartFeatures.Commands
                 _unitOfWork.Repository<CartItem>().Update(cartItem);
                 await _unitOfWork.CompleteAsync(cancellationToken);
 
-                return Result<CartDto>.Success(await GetCartDtoAsync(cartItem.CartId, cancellationToken));
-            }
-
-            private async Task<CartDto> GetCartDtoAsync(string cartId, CancellationToken cancellationToken)
-            {
-                var cart = await _unitOfWork.Repository<Cart>()
-                    .FindByCondition(c => c.Id == cartId)
-                    .Include(c => c.Items)
-                    .FirstOrDefaultAsync(cancellationToken);
-
-                var items = new List<CartItemDto>();
-                decimal subtotal = 0;
-
-                foreach (var item in cart!.Items)
-                {
-                    var product = await _unitOfWork.Repository<Product>()
-                        .FindByCondition(p => p.Id == item.ProductId)
-                        .Include(p => p.Images)
-                        .Include(p => p.Variants)
-                        .FirstOrDefaultAsync(cancellationToken);
-
-                    string? variantLabel = null;
-                    decimal currentPrice;
-
-                    if (!string.IsNullOrEmpty(item.VariantId) && product != null)
-                    {
-                        var variant = product.Variants.FirstOrDefault(v => v.Id == item.VariantId);
-                        currentPrice = variant?.Price ?? item.UnitPrice;
-                        variantLabel = ProductVariantLabels.For(variant);
-                    }
-                    else
-                    {
-                        currentPrice = product?.DiscountPrice ?? product?.Price ?? item.UnitPrice;
-                    }
-
-                    var itemTotal = currentPrice * item.Quantity;
-                    subtotal += itemTotal;
-
-                    items.Add(new CartItemDto
-                    {
-                        Id = item.Id,
-                        ProductId = item.ProductId,
-                        VariantId = item.VariantId,
-                        VariantLabel = variantLabel,
-                        ProductName = product?.NameEN ?? "",
-                        ProductImageUrl = product?.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl,
-                        Quantity = item.Quantity,
-                        UnitPrice = currentPrice,
-                        TotalPrice = itemTotal
-                    });
-                }
+                var (items, subtotal) = await CartProjector.BuildItemsAsync(_unitOfWork, cart, cancellationToken);
 
                 decimal tax = subtotal * 0.15m;
                 decimal shipping = subtotal > 100 ? 0 : 10;
                 decimal total = subtotal + tax + shipping;
 
-                return new CartDto
+                return Result<CartDto>.Success(new CartDto
                 {
                     Id = cart.Id,
                     Items = items,
@@ -143,7 +93,7 @@ namespace Application.Features.CartFeatures.Commands
                     ShippingCost = shipping,
                     Total = total,
                     CouponCode = cart.CouponCode
-                };
+                });
             }
         }
     }

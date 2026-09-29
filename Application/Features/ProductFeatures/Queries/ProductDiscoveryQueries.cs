@@ -24,6 +24,7 @@ namespace Application.Features.ProductFeatures.Queries
                     .Include(p => p.Category)
                     .Include(p => p.Brand)
                     .Include(p => p.Attributes)
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(cancellationToken);
 
                 if (product == null)
@@ -41,6 +42,7 @@ namespace Application.Features.ProductFeatures.Queries
                     .Include(p => p.Images)
                     .Include(p => p.Variants)
                     .Include(p => p.Reviews)
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 var productAttrs = product.Attributes
@@ -135,6 +137,7 @@ namespace Application.Features.ProductFeatures.Queries
                     .Select(g => new { ProductId = g.Key, Quantity = g.Sum(i => i.Quantity) })
                     .OrderByDescending(x => x.Quantity)
                     .Take(Math.Max(1, Math.Min(12, request.Count)))
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 if (coPurchased.Count == 0)
@@ -148,6 +151,7 @@ namespace Application.Features.ProductFeatures.Queries
                     .Include(p => p.Images)
                     .Include(p => p.Variants)
                     .Include(p => p.Reviews)
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 var rank = coPurchased.Select((c, i) => new { c.ProductId, i }).ToDictionary(x => x.ProductId, x => x.i);

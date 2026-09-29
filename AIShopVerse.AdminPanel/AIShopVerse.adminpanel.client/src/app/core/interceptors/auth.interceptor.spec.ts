@@ -29,7 +29,7 @@ describe('authInterceptor', () => {
 
   beforeEach(() => {
     sessionStorage.clear();
-    routerSpy = jasmine.createSpyObj('Router', ['navigateByUrl']);
+    routerSpy = jasmine.createSpyObj('Router', ['navigateByUrl', 'navigate']);
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
@@ -107,7 +107,7 @@ describe('authInterceptor', () => {
     httpMock.expectOne(`${api}auth/logout`).flush({ isSuccess: true, data: true });
 
     expect(failed).toBeTrue();
-    expect(routerSpy.navigateByUrl).toHaveBeenCalledWith('/login');
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { sessionExpired: '1' } });
     expect(sessionStorage.getItem('accessToken')).toBeNull();
   });
 
@@ -127,8 +127,11 @@ describe('authInterceptor', () => {
     expect(retried.request.headers.get('X-Auth-Retry')).toBe('true');
     retried.flush({ message: 'Unauthorized' }, { status: 401, statusText: 'Unauthorized' });
 
-    httpMock.expectNone(`${api}auth/refresh-token`);
+    httpMock.expectOne(`${api}auth/logout`).flush({ isSuccess: true, data: true });
+
     expect(failures).toBe(1);
+    expect(routerSpy.navigate).toHaveBeenCalledWith(['/login'], { queryParams: { sessionExpired: '1' } });
+    expect(sessionStorage.getItem('accessToken')).toBeNull();
   });
 
   it('coalesces concurrent 401s into a single refresh request', () => {

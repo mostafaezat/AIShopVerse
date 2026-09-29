@@ -1,6 +1,7 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subject, takeUntil } from 'rxjs';
 import { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale,
   DoughnutController, ArcElement, Tooltip, Legend, Filler
 } from 'chart.js';
@@ -31,7 +32,12 @@ Chart.register(
         </div>
       </div>
 
-      <div class="kpis">
+      <div *ngIf="loading" class="text-muted">Loading dashboard...</div>
+      <div *ngIf="!loading && loadError" class="alert alert-warning">
+        Unable to load dashboard data. <button (click)="reload()">Retry</button>
+      </div>
+
+      <div class="kpis" *ngIf="!loading && !loadError">
         <div class="kpi"><span class="k-label">Total Revenue</span><span class="k-value">{{ data?.totalRevenue | currency }}</span></div>
         <div class="kpi"><span class="k-label">Total Orders</span><span class="k-value">{{ data?.totalOrders }}</span></div>
         <div class="kpi"><span class="k-label">Avg Order Value</span><span class="k-value">{{ data?.averageOrderValue | currency }}</span></div>
@@ -111,30 +117,49 @@ Chart.register(
     @media (max-width: 900px) { .charts { grid-template-columns: 1fr; } }
   `]
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   data: any;
   days: number | null = 30;
+  loading = true;
+  loadError = false;
 
   @ViewChild('revenueCanvas') revenueCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('statusCanvas') statusCanvas!: ElementRef<HTMLCanvasElement>;
 
   private revenueChart: Chart | null = null;
   private statusChart: Chart | null = null;
+  private destroy$ = new Subject<void>();
 
   constructor(private dashboardService: DashboardService, private signalR: SignalRService) {}
 
   ngOnInit() {
     this.load();
-    this.signalR.newOrder$.subscribe(() => this.load());
-    this.signalR.lowStock$.subscribe(() => this.load());
+    this.signalR.newOrder$.pipe(takeUntil(this.destroy$)).subscribe(() => this.load());
+    this.signalR.lowStock$.pipe(takeUntil(this.destroy$)).subscribe(() => this.load());
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+    if (this.revenueChart) this.revenueChart.destroy();
+    if (this.statusChart) this.statusChart.destroy();
   }
 
   reload() { this.load(); }
 
   private load() {
-    this.dashboardService.getAnalytics(this.days ?? undefined).subscribe(res => {
-      this.data = res.data;
-      this.renderCharts();
+    this.loading = true;
+    this.loadError = false;
+    this.dashboardService.getAnalytics(this.days ?? undefined).subscribe({
+      next: res => {
+        this.data = res.data;
+        this.loading = false;
+        this.renderCharts();
+      },
+      error: () => {
+        this.loading = false;
+        this.loadError = true;
+      }
     });
   }
 

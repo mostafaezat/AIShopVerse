@@ -24,7 +24,8 @@ namespace Application
 
             services.AddScoped<IJwtTokenService, JwtTokenService>();
             services.AddScoped<IUserManagerAdapter, UserManagerAdapter>();
-            services.AddSingleton<Application.Services.IEmailService, Application.Services.DevEmailService>();
+            services.AddSingleton<ISmtpTransport, SmtpClientTransport>();
+            services.AddSingleton<IEmailService, SmtpEmailService>();
 
             services.AddScoped<IPricingService, PricingService>();
             services.AddScoped<IPaymentCompletionService, PaymentCompletionService>();

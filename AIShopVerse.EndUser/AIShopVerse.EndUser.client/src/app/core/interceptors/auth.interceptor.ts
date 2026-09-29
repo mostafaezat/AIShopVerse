@@ -19,12 +19,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
           !isAuthRoute(req.url) && !req.headers.has('X-Auth-Retry')) {
         return authService.refreshAccessToken().pipe(
           catchError(() => {
-            authService.logout();
+            authService.logout(true);
             return throwError(() => error);
           }),
           switchMap((response) => {
             if (!(response?.isSuccess && response.data?.token)) {
-              authService.logout();
+              authService.logout(true);
               return throwError(() => error);
             }
             const retried = req.clone({
@@ -33,7 +33,14 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                 Authorization: `Bearer ${response.data.token}`
               }
             });
-            return next(retried);
+            return next(retried).pipe(
+              catchError((retryErr) => {
+                if (retryErr instanceof HttpErrorResponse && retryErr.status === 401) {
+                  authService.logout(true);
+                }
+                return throwError(() => retryErr);
+              })
+            );
           })
         );
       }

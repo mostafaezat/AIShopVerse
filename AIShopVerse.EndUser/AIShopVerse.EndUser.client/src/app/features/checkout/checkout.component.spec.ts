@@ -73,7 +73,8 @@ describe('CheckoutComponent', () => {
     expect(orderServiceStub.checkout).toHaveBeenCalledWith(
       '123 Main St', 'Billing Ave', 'SAVE10', 'CashOnDelivery'
     );
-    expect(routerStub.navigateByUrl).toHaveBeenCalledWith('/orders');
+    expect(routerStub.navigateByUrl).toHaveBeenCalledWith('/orders/o1');
+    expect(toastrStub.success).toHaveBeenCalledWith('Order ORD-20260828-ABC12345 placed!', 'Success');
   });
 
   it('should omit billing address on cash path when same as shipping', async () => {
@@ -131,7 +132,7 @@ describe('CheckoutComponent', () => {
     );
     await component.onSubmit();
 
-    expect(toastrStub.error).toHaveBeenCalled();
+    expect(toastrStub.error).toHaveBeenCalledWith('Cart is empty.', 'Error');
     expect(component.submitting).toBe(false);
   });
 });

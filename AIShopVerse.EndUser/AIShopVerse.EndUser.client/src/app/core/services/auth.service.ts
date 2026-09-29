@@ -83,21 +83,27 @@ export class AuthService {
     this.currentUserSubject.next(authResult.user);
   }
 
-  logout() {
+  logout(expired = false) {
     const refreshToken = sessionStorage.getItem(this.refreshTokenKey);
     const token = sessionStorage.getItem(this.accessTokenKey);
+    sessionStorage.removeItem(this.accessTokenKey);
+    sessionStorage.removeItem(this.refreshTokenKey);
+    sessionStorage.removeItem(this.expiresAtKey);
+    sessionStorage.removeItem(this.authUserKey);
+    this.currentUserSubject.next(null);
     if (!token && !refreshToken) return;
     if (refreshToken) {
       // Best-effort server-side revocation; local state is cleared regardless.
       this.http.post(`${environment.apiIdentityEndpoint}auth/logout`, { refreshToken })
         .subscribe({ error: () => { /* ignore: session is cleared locally */ } });
     }
-    sessionStorage.removeItem(this.accessTokenKey);
-    sessionStorage.removeItem(this.refreshTokenKey);
-    sessionStorage.removeItem(this.expiresAtKey);
-    sessionStorage.removeItem(this.authUserKey);
-    this.currentUserSubject.next(null);
-    this.router.navigateByUrl('/');
+    if (expired) {
+      this.router.navigate(['/login'], {
+        queryParams: { sessionExpired: '1', returnUrl: this.router.url }
+      });
+    } else {
+      this.router.navigateByUrl('/');
+    }
   }
 
   isLoggedIn(): boolean {

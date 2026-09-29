@@ -26,17 +26,25 @@ import { OrderService } from '../../core/services/order.service';
       <table>
         <thead><tr><th>Order #</th><th>Date</th><th>Status</th><th>Total</th><th>Actions</th></tr></thead>
         <tbody>
+          <tr *ngIf="loading"><td colspan="5">Loading orders...</td></tr>
+          <tr *ngIf="!loading && loadError"><td colspan="5">Unable to load orders. <button (click)="loadOrders()">Retry</button></td></tr>
+          <tr *ngIf="!loading && !loadError && orders.length === 0"><td colspan="5">No orders found.</td></tr>
           <tr *ngFor="let order of orders">
             <td><a routerLink="/orders/{{ order.id }}">{{ order.orderNumber }}</a></td>
             <td>{{ order.createdAt | date }}</td>
             <td>{{ order.status }}</td>
             <td>{{ order.total | currency }}</td>
             <td>
-              <select *ngIf="getStatusOptions(order.status).length > 0" (change)="updateStatus(order.id, $any($event.target).value)">
+              <select *ngIf="getStatusOptions(order.status).length > 0"
+                      (change)="updateStatus(order, $any($event.target).value)"
+                      [disabled]="statusBusy.has(order.id)">
                 <option *ngFor="let opt of getStatusOptions(order.status)" [value]="opt.value">{{ opt.label }}</option>
               </select>
               <span class="terminal-status" *ngIf="getStatusOptions(order.status).length === 0">{{ order.status }}</span>
-              <button class="btn-refund" *ngIf="isRefundable(order.status)" (click)="refund(order.id)">Refund</button>
+              <button class="btn-refund" *ngIf="isRefundable(order.status)" (click)="refund(order.id)"
+                      [disabled]="refundingId === order.id">
+                {{ refundingId === order.id ? 'Refunding...' : 'Refund' }}
+              </button>
             </td>
           </tr>
         </tbody>
@@ -53,6 +61,10 @@ import { OrderService } from '../../core/services/order.service';
 export class OrderListComponent implements OnInit {
   orders: any[] = [];
   statusFilter = '';
+  loading = true;
+  loadError = false;
+  refundingId: string | null = null;
+  statusBusy = new Set<string>();
 
   private readonly statusOptions = [
     { value: '0', label: 'Pending' },
@@ -76,15 +88,51 @@ export class OrderListComponent implements OnInit {
 
   constructor(private orderService: OrderService) {}
   ngOnInit() { this.loadOrders(); }
-  loadOrders() { this.orderService.getAll(1, 50, this.statusFilter).subscribe(res => this.orders = res.data || []); }
-  updateStatus(orderId: string, status: number) {
-    this.orderService.updateStatus(orderId, parseInt(status as any)).subscribe(() => this.loadOrders());
+  loadOrders() {
+    this.loading = true;
+    this.loadError = false;
+    this.orderService.getAll(1, 50, this.statusFilter).subscribe({
+      next: res => {
+        this.orders = res.data || [];
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.loadError = true;
+        this.orders = [];
+      }
+    });
+  }
+  updateStatus(order: any, status: number) {
+    if (this.statusBusy.has(order.id)) return;
+    const previous = order.status;
+    this.statusBusy.add(order.id);
+    this.orderService.updateStatus(order.id, parseInt(status as any)).subscribe({
+      next: () => {
+        this.statusBusy.delete(order.id);
+        this.loadOrders();
+      },
+      error: (err: any) => {
+        this.statusBusy.delete(order.id);
+        order.status = previous;
+        alert(err?.error?.message || 'Failed to update status.');
+      }
+    });
   }
   refund(orderId: string) {
     if (!confirm('Refund this order? This will issue a real payment refund if Stripe is configured.')) return;
+    if (this.refundingId === orderId) return;
+    this.refundingId = orderId;
     this.orderService.refund(orderId).subscribe({
-      next: () => { alert('Order refunded.'); this.loadOrders(); },
-      error: (err: any) => alert(err?.error?.message || 'Refund failed.')
+      next: () => {
+        this.refundingId = null;
+        alert('Order refunded.');
+        this.loadOrders();
+      },
+      error: (err: any) => {
+        this.refundingId = null;
+        alert(err?.error?.message || 'Refund failed.');
+      }
     });
   }
   isRefundable(status: string): boolean {

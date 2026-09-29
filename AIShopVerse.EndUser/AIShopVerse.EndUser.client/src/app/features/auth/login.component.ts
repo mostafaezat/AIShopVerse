@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastrService } from 'ngx-toastr';
 
@@ -134,13 +134,21 @@ export class LoginComponent {
   emailError = '';
   passwordError = '';
   googleClientId: string;
+  private returnUrl: string | null = null;
 
   constructor(
     private auth: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private toastr: ToastrService
   ) {
     this.googleClientId = (window as any).__GOOGLE_CLIENT_ID__ || '';
+    const params = this.route.snapshot.queryParamMap;
+    if (params.get('sessionExpired') === '1') {
+      this.serverError = 'Your session has expired. Please sign in again.';
+    }
+    const returnUrl = params.get('returnUrl');
+    this.returnUrl = returnUrl && returnUrl.startsWith('/') ? returnUrl : null;
   }
 
   clearError(field: string) {
@@ -181,7 +189,7 @@ export class LoginComponent {
         if (res?.isSuccess && this.auth.isLoggedIn()) {
           this.loading = false;
           this.toastr.success('Welcome back!', 'Signed In');
-          this.router.navigateByUrl('/');
+          this.router.navigateByUrl(this.returnUrl || '/');
         } else {
           this.serverError = res?.message || 'Invalid email or password.';
           this.loading = false;

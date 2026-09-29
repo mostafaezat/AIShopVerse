@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { Subject, takeUntil, switchMap, tap, repeat, catchError, of } from 'rxjs';
+import { Subject, takeUntil, tap, repeat, catchError, of, delay } from 'rxjs';
 import { OrderService } from '../../core/services/order.service';
 import { SignalRService } from '../../core/services/signalr.service';
 import { Order } from '../../core/models';
@@ -12,7 +12,14 @@ import { Order } from '../../core/models';
   imports: [CommonModule],
   template: `
     <div class="container py-4 order-detail">
-      <div *ngIf="order">
+      <div *ngIf="loading" class="text-center py-5 text-muted">Loading order...</div>
+      <div *ngIf="!loading && loadError" class="text-center py-5">
+        <div class="alert alert-warning mx-auto" style="max-width:480px;">
+          Unable to load this order. It may have been removed or the session expired.
+          <div class="mt-2"><button class="btn btn-outline-secondary btn-sm" (click)="loadOrder()">Retry</button></div>
+        </div>
+      </div>
+      <div *ngIf="!loading && !loadError && order">
         <h2>Order {{ order.orderNumber }}</h2>
         <p>Status: <strong class="badge" [class]="'text-bg-' + statusBadge">{{ order.status }}</strong></p>
         <p>Subtotal: {{ order.subtotal | currency }}</p>
@@ -31,6 +38,8 @@ import { Order } from '../../core/models';
 export class OrderDetailComponent implements OnInit, OnDestroy {
   order: Order | null = null;
   statusBadge = 'secondary';
+  loading = true;
+  loadError = false;
   private orderId = '';
   private destroy$ = new Subject<void>();
 
@@ -43,7 +52,7 @@ export class OrderDetailComponent implements OnInit, OnDestroy {
     this.signalR.orderStatus$
       .pipe(takeUntil(this.destroy$))
       .subscribe(update => {
-        if (update && update.orderId === this.orderId) {
+        if (update && update.orderId === this.orderId && this.order) {
           this.order!.status = update.status as any;
           this.setBadge(update.status);
         }
@@ -54,9 +63,18 @@ export class OrderDetailComponent implements OnInit, OnDestroy {
   }
 
   private loadOrder() {
-    this.orderService.getById(this.orderId).subscribe(order => {
-      this.order = order;
-      this.setBadge(order.status as unknown as string);
+    this.loading = true;
+    this.loadError = false;
+    this.orderService.getById(this.orderId).subscribe({
+      next: order => {
+        this.order = order;
+        this.loading = false;
+        this.setBadge(order.status as unknown as string);
+      },
+      error: () => {
+        this.loading = false;
+        this.loadError = true;
+      }
     });
   }
 
@@ -69,9 +87,10 @@ export class OrderDetailComponent implements OnInit, OnDestroy {
             this.setBadge(o.status as unknown as string);
           }
         }),
-        repeat({ delay: 10000 }),
-        takeUntil(this.destroy$),
-        catchError(() => of(null))
+        catchError(() => of(null)),
+        delay(10000),
+        repeat(),
+        takeUntil(this.destroy$)
       )
       .subscribe(() => {});
   }

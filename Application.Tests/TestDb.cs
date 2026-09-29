@@ -8,6 +8,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,6 +28,8 @@ namespace Application.Tests
         public ISender Mediator { get; }
         public UserManager<ApplicationUser> UserManager { get; }
         public IConfiguration Configuration { get; }
+
+        public TestQueryCounter QueryCounter { get; } = new();
 
         public TestDb(string? connectionString = null)
         {
@@ -54,6 +57,7 @@ namespace Application.Tests
             var services = new ServiceCollection();
             services.AddSingleton<IConfiguration>(Configuration);
             services.AddLogging();
+            services.AddSingleton<IInterceptor>(QueryCounter);
             services.AddInfrastructureDependencies(Configuration);
             services.AddApplicationDependencies();
             services.AddSingleton<ICurrentUserService>(_currentUser);

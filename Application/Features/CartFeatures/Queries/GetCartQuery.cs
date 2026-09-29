@@ -1,5 +1,4 @@
 using Domain.Entities.CartEntities;
-using Domain.Entities.CatalogEntities;
 using Application.Services;
 
 namespace Application.Features.CartFeatures.Queries
@@ -44,48 +43,7 @@ namespace Application.Features.CartFeatures.Queries
                     });
                 }
 
-                var items = new List<CartItemDto>();
-                decimal subtotal = 0;
-
-                foreach (var item in cart.Items)
-                {
-                    var product = await _unitOfWork.Repository<Product>()
-                        .FindByCondition(p => p.Id == item.ProductId)
-                        .Include(p => p.Images)
-                        .Include(p => p.Variants)
-                        .FirstOrDefaultAsync(cancellationToken);
-
-                    string? variantLabel = null;
-                    decimal currentPrice;
-
-                    if (!string.IsNullOrEmpty(item.VariantId) && product != null)
-                    {
-                        var variant = product.Variants.FirstOrDefault(v => v.Id == item.VariantId);
-                        currentPrice = variant?.Price ?? item.UnitPrice;
-                        variantLabel = ProductVariantLabels.For(variant);
-                    }
-                    else
-                    {
-                        currentPrice = product?.DiscountPrice ?? product?.Price ?? item.UnitPrice;
-                    }
-
-                    item.UnitPrice = currentPrice;
-                    var itemTotal = currentPrice * item.Quantity;
-                    subtotal += itemTotal;
-
-                    items.Add(new CartItemDto
-                    {
-                        Id = item.Id,
-                        ProductId = item.ProductId,
-                        VariantId = item.VariantId,
-                        VariantLabel = variantLabel,
-                        ProductName = product?.NameEN ?? "",
-                        ProductImageUrl = product?.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl,
-                        Quantity = item.Quantity,
-                        UnitPrice = currentPrice,
-                        TotalPrice = itemTotal
-                    });
-                }
+                var (items, subtotal) = await CartProjector.BuildItemsAsync(_unitOfWork, cart, cancellationToken);
 
                 var couponResult = await _pricingService
                     .ValidateAndApplyCouponAsync(string.IsNullOrWhiteSpace(request.CouponCode) ? cart.CouponCode : request.CouponCode, subtotal, cancellationToken);

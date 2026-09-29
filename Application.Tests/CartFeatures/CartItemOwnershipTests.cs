@@ -89,7 +89,7 @@ namespace Application.Tests.CartFeatures
             Assert.True(result.IsSuccess, result.Message ?? "update failed");
             var fresh = await db.DbContext.CartItems.SingleAsync();
             Assert.Equal(5, fresh.Quantity);
-            Assert.Equal(5, result.Data.Items.Single().Quantity);
+            Assert.Equal(5, result.Data!.Items.Single().Quantity);
         }
 
         [Fact]

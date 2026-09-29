@@ -21,6 +21,10 @@ import { ProductSliderComponent } from '../../shared/product-slider.component';
     </div>
 
     <div class="container py-4">
+      <div *ngIf="loadError" class="alert alert-warning text-center">
+        We could not load the latest products. <button class="btn btn-sm btn-outline-secondary ms-2" (click)="loadHome()">Retry</button>
+      </div>
+
       <app-product-slider
         *ngIf="bestSellers.length"
         [products]="bestSellers"
@@ -79,6 +83,7 @@ export class HomeComponent implements OnInit {
   newArrivals: Product[] = [];
   promotions: Product[] = [];
   recommended: RecommendedForYou | null = null;
+  loadError = false;
 
   constructor(
     public auth: AuthService,
@@ -87,19 +92,27 @@ export class HomeComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.loadHome();
+  }
+
+  loadHome() {
+    this.loadError = false;
+    let failed = false;
+    const onFail = () => { failed = true; this.loadError = true; };
+
     this.productService.getBestSellers(12).subscribe({
       next: res => this.bestSellers = res || [],
-      error: () => this.bestSellers = []
+      error: onFail
     });
 
     this.productService.getNewArrivals(12).subscribe({
       next: res => this.newArrivals = res || [],
-      error: () => this.newArrivals = []
+      error: onFail
     });
 
     this.productService.getPromotions(12).subscribe({
       next: res => this.promotions = res || [],
-      error: () => this.promotions = []
+      error: onFail
     });
 
     if (this.auth.isLoggedIn()) {
@@ -107,6 +120,12 @@ export class HomeComponent implements OnInit {
         next: res => this.recommended = res || null,
         error: () => this.recommended = null
       });
+    }
+
+    if (failed) {
+      this.bestSellers = [];
+      this.newArrivals = [];
+      this.promotions = [];
     }
   }
 }

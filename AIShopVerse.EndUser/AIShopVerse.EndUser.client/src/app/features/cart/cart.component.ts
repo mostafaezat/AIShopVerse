@@ -14,12 +14,21 @@ import { CartDto, CartItemDto } from '../../core/models';
     <div class="container py-4">
       <h2 class="mb-4">Shopping Cart</h2>
 
-      <div *ngIf="cart && cart.items.length === 0" class="text-center py-5">
+      <div *ngIf="loading" class="text-center py-5 text-muted">Loading your cart...</div>
+
+      <div *ngIf="!loading && loadError" class="text-center py-5">
+        <div class="alert alert-warning mx-auto" style="max-width:480px;">
+          Unable to load your cart. Please try again.
+          <div class="mt-2"><button class="btn btn-outline-secondary btn-sm" (click)="loadCart()">Retry</button></div>
+        </div>
+      </div>
+
+      <div *ngIf="!loading && !loadError && cart && cart.items.length === 0" class="text-center py-5">
         <h5>Your cart is empty.</h5>
         <a routerLink="/products" class="btn btn-primary mt-3">Start Shopping</a>
       </div>
 
-      <div *ngIf="cart && cart.items.length > 0">
+      <div *ngIf="!loading && !loadError && cart && cart.items.length > 0">
         <div class="row">
           <div class="col-lg-8">
             <div class="card mb-3" *ngFor="let item of cart.items">
@@ -35,17 +44,19 @@ import { CartDto, CartItemDto } from '../../core/models';
                 </div>
                 <div class="col-md-3">
                   <div class="input-group input-group-sm">
-                    <button class="btn btn-outline-secondary" (click)="decrease(item)" [disabled]="item.quantity <= 1">-</button>
+                    <button class="btn btn-outline-secondary" (click)="decrease(item)" [disabled]="item.quantity <= 1 || processingIds.has(item.id)">-</button>
                     <input type="number" class="form-control text-center" [value]="item.quantity"
-                           (change)="changeQty(item, $event)" min="1" style="max-width:60px;">
-                    <button class="btn btn-outline-secondary" (click)="increase(item)">+</button>
+                           (change)="changeQty(item, $event)" min="1" style="max-width:60px;"
+                           [disabled]="processingIds.has(item.id)">
+                    <button class="btn btn-outline-secondary" (click)="increase(item)" [disabled]="processingIds.has(item.id)">+</button>
                   </div>
                 </div>
                 <div class="col-md-2 text-end pe-3">
                   <strong>{{ item.totalPrice | currency }}</strong>
                 </div>
                 <div class="col-md-1 text-center">
-                  <button class="btn btn-sm btn-outline-danger" (click)="remove(item)">x</button>
+                  <button class="btn btn-sm btn-outline-danger" (click)="remove(item)"
+                          [disabled]="processingIds.has(item.id)">x</button>
                 </div>
               </div>
             </div>
@@ -58,9 +69,9 @@ import { CartDto, CartItemDto } from '../../core/models';
                 <div class="mb-3">
                   <label class="form-label">Coupon Code</label>
                   <div class="input-group">
-                    <input class="form-control" [(ngModel)]="couponInput" placeholder="Enter coupon">
-                    <button class="btn btn-outline-primary" (click)="applyCoupon()" *ngIf="!cart.couponCode">Apply</button>
-                    <button class="btn btn-outline-secondary" (click)="removeCoupon()" *ngIf="cart.couponCode">Remove</button>
+                    <input class="form-control" [(ngModel)]="couponInput" placeholder="Enter coupon" [disabled]="couponBusy">
+                    <button class="btn btn-outline-primary" (click)="applyCoupon()" *ngIf="!cart.couponCode" [disabled]="couponBusy">{{ couponBusy ? '...' : 'Apply' }}</button>
+                    <button class="btn btn-outline-secondary" (click)="removeCoupon()" *ngIf="cart.couponCode" [disabled]="couponBusy">{{ couponBusy ? '...' : 'Remove' }}</button>
                   </div>
                 </div>
                 <div class="d-flex justify-content-between">
@@ -91,11 +102,30 @@ import { CartDto, CartItemDto } from '../../core/models';
 export class CartComponent implements OnInit {
   cart: CartDto | null = null;
   couponInput = '';
+  loading = true;
+  loadError = false;
+  couponBusy = false;
+  processingIds = new Set<string>();
 
   constructor(private cartService: CartService, private toastr: ToastrService) {}
 
   ngOnInit() {
-    this.cartService.getCart().subscribe(cart => this.cart = cart);
+    this.loadCart();
+  }
+
+  loadCart() {
+    this.loading = true;
+    this.loadError = false;
+    this.cartService.getCart().subscribe({
+      next: cart => {
+        this.cart = cart;
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.loadError = true;
+      }
+    });
   }
 
   increase(item: CartItemDto) {
@@ -112,44 +142,76 @@ export class CartComponent implements OnInit {
     const qty = parseInt(event.target.value, 10);
     if (qty >= 1) {
       this.updateQty(item, qty);
+    } else {
+      this.cart = this.cart ? { ...this.cart } : this.cart;
+      this.toastr.warning('Quantity must be at least 1', 'Warning');
     }
   }
 
   updateQty(item: CartItemDto, quantity: number) {
-    this.cartService.updateCartItem(item.id, quantity).subscribe(cart => {
-      this.cart = cart;
+    if (this.processingIds.has(item.id)) return;
+    this.processingIds.add(item.id);
+    this.cartService.updateCartItem(item.id, quantity).subscribe({
+      next: cart => {
+        this.cart = cart;
+        this.processingIds.delete(item.id);
+      },
+      error: (err) => {
+        this.processingIds.delete(item.id);
+        this.toastr.error(err?.error?.message || 'Failed to update quantity', 'Error');
+      }
     });
   }
 
   remove(item: CartItemDto) {
+    if (this.processingIds.has(item.id)) return;
+    this.processingIds.add(item.id);
     this.cartService.removeCartItem(item.id).subscribe({
       next: () => {
         this.toastr.success('Item removed', 'Success');
-        this.cartService.getCart().subscribe(cart => this.cart = cart);
+        this.cartService.getCart().subscribe(cart => {
+          this.cart = cart;
+          this.processingIds.delete(item.id);
+        });
       },
-      error: () => this.toastr.error('Failed to remove item', 'Error')
+      error: (err) => {
+        this.processingIds.delete(item.id);
+        this.toastr.error(err?.error?.message || 'Failed to remove item', 'Error');
+      }
     });
   }
 
   applyCoupon() {
     if (!this.couponInput.trim()) { this.toastr.warning('Enter a coupon code', 'Warning'); return; }
+    if (this.couponBusy) return;
+    this.couponBusy = true;
     this.cartService.applyCoupon(this.couponInput.trim()).subscribe({
       next: cart => {
         this.cart = cart;
+        this.couponBusy = false;
         this.toastr.success('Coupon applied', 'Success');
       },
-      error: (err) => this.toastr.error(err?.error?.message || 'Invalid coupon', 'Error')
+      error: (err) => {
+        this.couponBusy = false;
+        this.toastr.error(err?.error?.message || 'Invalid coupon', 'Error');
+      }
     });
   }
 
   removeCoupon() {
+    if (this.couponBusy) return;
+    this.couponBusy = true;
     this.cartService.removeCoupon().subscribe({
       next: cart => {
         this.cart = cart;
         this.couponInput = '';
+        this.couponBusy = false;
         this.toastr.success('Coupon removed', 'Success');
       },
-      error: () => this.toastr.error('Failed to remove coupon', 'Error')
+      error: (err) => {
+        this.couponBusy = false;
+        this.toastr.error(err?.error?.message || 'Failed to remove coupon', 'Error');
+      }
     });
   }
 }

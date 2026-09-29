@@ -28,6 +28,7 @@ namespace Application.Features.ProductFeatures.Queries
                     .Include(p => p.Variants)
                     .OrderByDescending(p => p.CreatedAt)
                     .Take(count)
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 return Result<List<ProductListItemDto>>.Success(

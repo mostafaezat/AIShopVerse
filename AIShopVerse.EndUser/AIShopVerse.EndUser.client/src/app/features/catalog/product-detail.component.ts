@@ -16,7 +16,17 @@ import { Product, Review } from '../../core/models';
   standalone: true,
   imports: [CommonModule, RouterModule, FormsModule],
   template: `
-    <div class="container py-4" *ngIf="product">
+    <div class="container py-4">
+      <div *ngIf="loading" class="text-center py-5 text-muted">Loading product...</div>
+
+      <div *ngIf="!loading && loadError" class="text-center py-5">
+        <div class="alert alert-warning mx-auto" style="max-width:480px;">
+          Unable to load this product. It may have been removed or the session expired.
+          <div class="mt-2"><button class="btn btn-outline-secondary btn-sm" (click)="loadProduct()">Retry</button></div>
+        </div>
+      </div>
+
+      <ng-container *ngIf="!loading && !loadError && product">
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a routerLink="/products">Products</a></li>
@@ -74,11 +84,12 @@ import { Product, Review } from '../../core/models';
           <div class="d-flex gap-2 mb-3">
             <button class="btn btn-primary btn-lg"
                     *ngIf="auth.isLoggedIn()"
-                    [disabled]="(activeVariants.length && !selectedVariant) || (activeVariants.length ? selectedVariantStock === 0 : product.stockQuantity === 0)"
-                    (click)="addToCart()">Add to Cart</button>
+                    [disabled]="cartBusy || (activeVariants.length && !selectedVariant) || (activeVariants.length ? selectedVariantStock === 0 : product.stockQuantity === 0)"
+                    (click)="addToCart()">{{ cartBusy ? 'Adding...' : 'Add to Cart' }}</button>
             <button class="btn btn-outline-danger btn-lg"
                     *ngIf="auth.isLoggedIn()"
-                    (click)="toggleWishlist()">{{ inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist' }}</button>
+                    [disabled]="wishlistBusy"
+                    (click)="toggleWishlist()">{{ wishlistBusy ? 'Updating...' : (inWishlist ? 'Remove from Wishlist' : 'Add to Wishlist') }}</button>
           </div>
           <p *ngIf="!auth.isLoggedIn() && product.stockQuantity > 0" class="text-muted">
             <a routerLink="/login">Login</a> to add this item to your cart.
@@ -152,7 +163,9 @@ import { Product, Review } from '../../core/models';
             </div>
             <textarea class="form-control mb-2" rows="3" placeholder="Share your thoughts..."
                       [(ngModel)]="newComment"></textarea>
-            <button class="btn btn-primary" [disabled]="newRating === 0" (click)="submitReview()">Submit Review</button>
+            <button class="btn btn-primary" [disabled]="newRating === 0 || reviewBusy" (click)="submitReview()">
+              {{ reviewBusy ? 'Submitting...' : 'Submit Review' }}
+            </button>
           </div>
         </div>
 
@@ -170,6 +183,7 @@ import { Product, Review } from '../../core/models';
           <p class="mb-0 mt-1">{{ review.comment }}</p>
         </div>
       </div>
+      </ng-container>
     </div>
   `
 })
@@ -190,6 +204,11 @@ export class ProductDetailComponent implements OnInit {
   selectedVariant: any = null;
   related: any[] = [];
   boughtTogether: any[] = [];
+  loading = true;
+  loadError = false;
+  cartBusy = false;
+  wishlistBusy = false;
+  reviewBusy = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -203,13 +222,26 @@ export class ProductDetailComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.loadProduct();
+  }
+
+  loadProduct() {
     const id = this.route.snapshot.paramMap.get('id')!;
-    this.productService.getById(id).subscribe(product => {
-      this.product = product;
-      const primary = product.images?.find((i: any) => i.isPrimary);
-      this.primaryImage = primary?.imageUrl || product.images?.[0]?.imageUrl || null;
-      this.selectedImage = this.primaryImage;
-      this.initVariants();
+    this.loading = true;
+    this.loadError = false;
+    this.productService.getById(id).subscribe({
+      next: product => {
+        this.product = product;
+        this.loading = false;
+        const primary = product.images?.find((i: any) => i.isPrimary);
+        this.primaryImage = primary?.imageUrl || product.images?.[0]?.imageUrl || null;
+        this.selectedImage = this.primaryImage;
+        this.initVariants();
+      },
+      error: () => {
+        this.loading = false;
+        this.loadError = true;
+      }
     });
     this.loadReviews(id);
     this.loadDiscovery(id);
@@ -271,51 +303,89 @@ export class ProductDetailComponent implements OnInit {
   }
 
   checkWishlist() {
-    this.wishlistService.getWishlist().subscribe(items => {
-      this.inWishlist = items.some(i => i.productId === this.product?.id);
+    this.wishlistService.getWishlist().subscribe({
+      next: items => {
+        this.inWishlist = (items || []).some(i => i.productId === this.product?.id);
+      },
+      error: () => { this.inWishlist = false; }
     });
   }
 
   loadReviews(productId: string) {
-    this.reviewService.getProductReviews(productId).subscribe(reviews => {
-      this.reviews = reviews || [];
+    this.reviewService.getProductReviews(productId).subscribe({
+      next: reviews => this.reviews = reviews || [],
+      error: () => this.reviews = []
     });
   }
 
   addToCart() {
+    if (this.cartBusy || !this.product) return;
     if (this.activeVariants.length && !this.selectedVariant) {
       this.toastr.warning('Please select a variant before adding to cart', 'Attention');
       return;
     }
+    this.cartBusy = true;
     this.cartService.addToCart(this.product.id, 1, this.selectedVariant?.id).subscribe({
-      next: () => this.toastr.success('Added to cart', 'Success'),
-      error: (err) => this.toastr.error(err?.error?.message || 'Failed to add to cart', 'Error')
+      next: () => {
+        this.cartBusy = false;
+        this.toastr.success('Added to cart', 'Success');
+      },
+      error: (err) => {
+        this.cartBusy = false;
+        this.toastr.error(err?.error?.message || err?.message || 'Failed to add to cart', 'Error');
+      }
     });
   }
 
   toggleWishlist() {
+    if (this.wishlistBusy || !this.product) return;
+    this.wishlistBusy = true;
     if (this.inWishlist) {
-      this.wishlistService.removeFromWishlist(this.product.id).subscribe(() => {
-        this.inWishlist = false;
-        this.toastr.success('Removed from wishlist', 'Success');
+      this.wishlistService.removeFromWishlist(this.product.id).subscribe({
+        next: () => {
+          this.inWishlist = false;
+          this.wishlistBusy = false;
+          this.toastr.success('Removed from wishlist', 'Success');
+        },
+        error: (err) => {
+          this.wishlistBusy = false;
+          this.toastr.error(err?.error?.message || err?.message || 'Failed to remove from wishlist', 'Error');
+        }
       });
     } else {
-      this.wishlistService.addToWishlist(this.product.id).subscribe(() => {
-        this.inWishlist = true;
-        this.toastr.success('Added to wishlist', 'Success');
+      this.wishlistService.addToWishlist(this.product.id).subscribe({
+        next: () => {
+          this.inWishlist = true;
+          this.wishlistBusy = false;
+          this.toastr.success('Added to wishlist', 'Success');
+        },
+        error: (err) => {
+          this.wishlistBusy = false;
+          this.toastr.error(err?.error?.message || err?.message || 'Failed to add to wishlist', 'Error');
+        }
       });
     }
   }
 
   submitReview() {
+    if (this.reviewBusy || !this.product) return;
+    if (this.newRating === 0) {
+      this.toastr.warning('Please select a rating', 'Attention');
+      return;
+    }
+    this.reviewBusy = true;
     this.reviewService.createReview(this.product.id, this.newRating, this.newComment).subscribe({
       next: () => {
+        this.reviewBusy = false;
         this.toastr.success('Review submitted', 'Success');
         this.newRating = 0;
         this.newComment = '';
         this.loadReviews(this.product.id);
       },
-      error: () => this.toastr.error('Failed to submit review', 'Error')
+      error: (err) => {
+        this.reviewBusy = false;
+        this.toastr.error(err?.error?.message || err?.message || 'Failed to submit review', 'Error');
+      }
     });
   }
 
@@ -330,7 +400,7 @@ export class ProductDetailComponent implements OnInit {
         this.toastr.success('Review deleted', 'Success');
         this.loadReviews(this.product.id);
       },
-      error: () => this.toastr.error('Failed to delete review', 'Error')
+      error: (err) => this.toastr.error(err?.error?.message || err?.message || 'Failed to delete review', 'Error')
     });
   }
 }

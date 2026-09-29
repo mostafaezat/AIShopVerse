@@ -78,6 +78,7 @@ namespace Application.Features.RecommendationFeatures.Queries
                     .Include(p => p.Category)
                     .Include(p => p.Brand)
                     .Include(p => p.Attributes)
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 var categoryWeight = new Dictionary<string, int>();
@@ -106,29 +107,32 @@ namespace Application.Features.RecommendationFeatures.Queries
                 var excludeIds = signalIds.ToHashSet();
                 var bestSellerUnits = await GetBestSellerUnitsAsync(cancellationToken);
 
-                var candidates = await _unitOfWork.Repository<Product>()
-                    .FindByCondition(p => p.IsActive)
-                    .Include(p => p.Category)
-                    .ThenInclude(c => c!.Parent)
-                    .Include(p => p.Brand)
-                    .Include(p => p.Attributes)
-                    .Include(p => p.Images)
-                    .Include(p => p.Variants)
-                    .Include(p => p.Reviews)
+                // Narrow scan: only the columns needed for scoring, before loading
+                // full product detail for the top-ranked subset.
+                var candidateRows = await _unitOfWork.Repository<Product>()
+                    .FindByCondition(p => p.IsActive && !excludeIds.Contains(p.Id))
+                    .AsNoTracking()
+                    .Select(p => new
+                    {
+                        p.Id,
+                        p.CategoryId,
+                        CategoryParentId = p.Category != null ? p.Category.ParentId : null,
+                        p.BrandId,
+                        p.StockQuantity,
+                        p.CreatedAt,
+                        p.Attributes
+                    })
                     .ToListAsync(cancellationToken);
 
-                var scored = new List<(double Score, Product p)>();
-                foreach (var c in candidates)
+                var scored = new List<(double Score, string ProductId, DateTime CreatedAt)>();
+                foreach (var c in candidateRows)
                 {
-                    if (excludeIds.Contains(c.Id)) continue;
-
                     double score = 0;
 
                     if (categoryWeight.TryGetValue(c.CategoryId, out var cw))
                         score += 5 * cw;
 
-                    var parentId = c.Category?.ParentId;
-                    if (parentId != null && parentWeight.TryGetValue(parentId, out var pw))
+                    if (c.CategoryParentId != null && parentWeight.TryGetValue(c.CategoryParentId, out var pw))
                         score += 3 * pw;
 
                     if (!string.IsNullOrEmpty(c.BrandId) && brandWeight.TryGetValue(c.BrandId, out var bw))
@@ -147,14 +151,31 @@ namespace Application.Features.RecommendationFeatures.Queries
                     if (bestSellerUnits.TryGetValue(c.Id, out var units))
                         score += Math.Min(2, units / 10.0);
 
-                    scored.Add((score, c));
+                    scored.Add((score, c.Id, c.CreatedAt));
                 }
 
-                var top = scored
+                var topIds = scored
                     .OrderByDescending(x => x.Score)
-                    .ThenBy(x => x.p.CreatedAt)
+                    .ThenBy(x => x.CreatedAt)
                     .Take(count)
-                    .Select(x => ToListItemDto(x.p))
+                    .Select(x => x.ProductId)
+                    .ToList();
+
+                var detailProducts = await _unitOfWork.Repository<Product>()
+                    .FindByCondition(p => topIds.Contains(p.Id))
+                    .Include(p => p.Category)
+                    .Include(p => p.Brand)
+                    .Include(p => p.Images)
+                    .Include(p => p.Variants)
+                    .Include(p => p.Reviews)
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+
+                var detailMap = detailProducts.ToDictionary(p => p.Id);
+
+                var top = topIds
+                    .Where(detailMap.ContainsKey)
+                    .Select(id => ToListItemDto(detailMap[id]))
                     .ToList();
 
                 return top;
@@ -177,6 +198,7 @@ namespace Application.Features.RecommendationFeatures.Queries
                     .Include(p => p.Images)
                     .Include(p => p.Variants)
                     .Include(p => p.Reviews)
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 var ordered = products
@@ -198,6 +220,7 @@ namespace Application.Features.RecommendationFeatures.Queries
                     .Include(p => p.Reviews)
                     .OrderByDescending(p => p.CreatedAt)
                     .Take(count - ordered.Count)
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 ordered.AddRange(fill.Select(ToListItemDto));

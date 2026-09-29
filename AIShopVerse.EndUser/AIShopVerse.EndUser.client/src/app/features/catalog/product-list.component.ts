@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { ToastrService } from 'ngx-toastr';
 import { ProductService } from '../../core/services/product.service';
 import { CategoryService, CategoryWithCount } from '../../core/services/category.service';
 import { BrandService, BrandWithCount } from '../../core/services/brand.service';
@@ -105,11 +106,18 @@ import { AuthService } from '../../core/services/auth.service';
         <section class="col-lg-9">
           <div *ngIf="loading" class="text-center py-5 text-muted">Loading products...</div>
 
-          <div *ngIf="!loading && products.length === 0" class="text-center py-5 text-muted">
+          <div *ngIf="!loading && loadError" class="text-center py-5">
+            <div class="alert alert-warning mx-auto" style="max-width:480px;">
+              Unable to load products. Please try again.
+              <div class="mt-2"><button class="btn btn-outline-secondary btn-sm" (click)="retry()">Retry</button></div>
+            </div>
+          </div>
+
+          <div *ngIf="!loading && !loadError && products.length === 0" class="text-center py-5 text-muted">
             No products match your filters.
           </div>
 
-          <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+          <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" *ngIf="!loading && !loadError">
             <div class="col" *ngFor="let product of products">
               <a [routerLink]="['/products', product.id]" class="text-decoration-none text-dark">
                 <div class="card h-100 product-card">
@@ -185,6 +193,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
   products: Product[] = [];
   result?: PagedResult<Product>;
   loading = false;
+  loadError = false;
 
   filteredBrands: BrandWithCount[] = [];
   filteredCategories: CategoryWithCount[] = [];
@@ -204,6 +213,8 @@ export class ProductListComponent implements OnInit, OnDestroy {
   wishlistSet = new Set<string>();
   private sub?: Subscription;
   private wishlistSub?: Subscription;
+  private lastFilter?: ProductFilterState;
+  private wishlistBusy = new Set<string>();
 
   constructor(
     private productService: ProductService,
@@ -213,7 +224,8 @@ export class ProductListComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private wishlistService: WishlistService,
-    private authService: AuthService
+    private authService: AuthService,
+    private toastr: ToastrService
   ) {}
 
   ngOnInit() {
@@ -259,30 +271,44 @@ export class ProductListComponent implements OnInit, OnDestroy {
       next: items => {
         this.wishlistSet = new Set((items || []).map(i => i.productId));
       },
-      error: () => {}
+      error: () => { this.wishlistSet = new Set(); }
     });
+  }
+
+  retry() {
+    if (this.lastFilter) {
+      this.applyFilter(this.lastFilter);
+    } else {
+      this.filterService.updateFilter(this.filterService.getFilter());
+    }
   }
 
   toggleWishlist(productId: string, event: Event) {
     event.preventDefault();
     event.stopPropagation();
     if (!this.authService.isLoggedIn()) {
-      this.router.navigate(['/login']);
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
       return;
     }
+    if (this.wishlistBusy.has(productId)) return;
     const inWishlist = this.wishlistSet.has(productId);
+    this.wishlistBusy.add(productId);
     const target = inWishlist
       ? this.wishlistService.removeFromWishlist(productId)
       : this.wishlistService.addToWishlist(productId);
     target.subscribe({
       next: () => {
+        this.wishlistBusy.delete(productId);
         if (inWishlist) {
           this.wishlistSet.delete(productId);
         } else {
           this.wishlistSet.add(productId);
         }
       },
-      error: () => {}
+      error: (err) => {
+        this.wishlistBusy.delete(productId);
+        this.toastr.error(err?.error?.message || err?.message || 'Failed to update wishlist', 'Error');
+      }
     });
   }
 
@@ -342,6 +368,8 @@ export class ProductListComponent implements OnInit, OnDestroy {
 
   private applyFilter(filter: ProductFilterState) {
     this.loading = true;
+    this.loadError = false;
+    this.lastFilter = filter;
     this.productService.getFiltered(filter).subscribe({
       next: res => {
         this.result = res;
@@ -351,6 +379,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading = false;
+        this.loadError = true;
         this.products = [];
       }
     });

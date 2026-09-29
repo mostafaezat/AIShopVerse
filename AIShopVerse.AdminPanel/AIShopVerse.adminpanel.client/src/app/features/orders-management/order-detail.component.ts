@@ -10,6 +10,11 @@ import { OrderService } from '../../core/services/order.service';
   template: `
     <div class="container py-4">
       <p><a routerLink="/orders">&larr; Back to orders</a></p>
+      <div *ngIf="loading" class="text-center py-5 text-muted">Loading order...</div>
+      <div *ngIf="!loading && loadError" class="alert alert-warning">
+        Unable to load this order. Please try again.
+        <button class="btn btn-sm btn-outline-secondary ms-2" (click)="loadOrder()">Retry</button>
+      </div>
       <div *ngIf="order">
         <h2>Order {{ order.orderNumber }}</h2>
         <p>
@@ -74,7 +79,7 @@ import { OrderService } from '../../core/services/order.service';
         </div>
         <p *ngIf="!order.payment" class="text-muted">No payment record.</p>
       </div>
-      <p *ngIf="!order && !loading">Order not found.</p>
+      <p *ngIf="!order && !loading && !loadError">Order not found.</p>
     </div>
   `,
   styles: [`
@@ -85,18 +90,26 @@ export class OrderDetailComponent implements OnInit {
   order: any = null;
   statusBadge = 'secondary';
   loading = true;
+  loadError = false;
+  private orderId = '';
 
   constructor(private route: ActivatedRoute, private orderService: OrderService) {}
 
   ngOnInit() {
-    const id = this.route.snapshot.paramMap.get('id')!;
-    this.orderService.getOrder(id).subscribe({
+    this.orderId = this.route.snapshot.paramMap.get('id')!;
+    this.loadOrder();
+  }
+
+  loadOrder() {
+    this.loading = true;
+    this.loadError = false;
+    this.orderService.getOrder(this.orderId).subscribe({
       next: res => {
         this.loading = false;
         this.order = (res && res.data) || null;
         if (this.order) this.setBadge(this.order.status);
       },
-      error: () => { this.loading = false; this.order = null; }
+      error: () => { this.loading = false; this.loadError = true; this.order = null; }
     });
   }
 

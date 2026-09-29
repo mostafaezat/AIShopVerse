@@ -106,20 +106,20 @@ export class CheckoutComponent {
         await this.submitCard(billing);
       }
     } catch (err: any) {
-      this.toastr.error(err?.message || 'Checkout failed', 'Error');
+      this.toastr.error(err?.error?.message || err?.message || 'Checkout failed', 'Error');
     } finally {
       this.submitting = false;
     }
   }
 
   private async submitCash(billing?: string) {
-    await firstValueFrom(this.orderService.checkout(
+    const order = await firstValueFrom(this.orderService.checkout(
       this.shippingAddress,
       billing,
       this.couponCode || undefined,
       'CashOnDelivery'
     ));
-    this.onSuccess();
+    this.onSuccess(order);
   }
 
   private async submitCard(billing?: string) {
@@ -139,8 +139,21 @@ export class CheckoutComponent {
     if (!paymentIntent) {
       throw new Error('Payment not finalized.');
     }
-    await firstValueFrom(this.paymentService.complete(res.orderId, paymentIntent.id));
-    this.onSuccess();
+    const order = await firstValueFrom(this.paymentService.complete(res.orderId, paymentIntent.id));
+    this.onSuccess(order || res);
+  }
+
+  private onSuccess(order: any) {
+    const orderLabel = order && order.orderNumber
+      ? `Order ${order.orderNumber} placed!`
+      : 'Order placed!';
+    this.toastr.success(orderLabel, 'Success');
+    const orderId = order?.id || order?.orderId;
+    if (orderId) {
+      this.router.navigateByUrl(`/orders/${orderId}`);
+    } else {
+      this.router.navigateByUrl('/orders');
+    }
   }
 
   private async ensureCardElement(): Promise<Stripe> {
@@ -150,10 +163,5 @@ export class CheckoutComponent {
     this.cardElement = this.stripe.elements().create('card');
     this.cardElement.mount('#card-element');
     return this.stripe;
-  }
-
-  private onSuccess() {
-    this.toastr.success('Order placed!', 'Success');
-    this.router.navigateByUrl('/orders');
   }
 }

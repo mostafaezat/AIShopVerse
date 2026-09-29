@@ -46,6 +46,7 @@ namespace Application.Features.ProductFeatures.Queries
                         .Include(p => p.Images)
                         .Include(p => p.Reviews)
                         .Include(p => p.Variants)
+                        .AsNoTracking()
                         .ToListAsync(cancellationToken);
 
                     var ordered = products
@@ -68,6 +69,7 @@ namespace Application.Features.ProductFeatures.Queries
                     .Include(p => p.Variants)
                     .OrderByDescending(p => p.CreatedAt)
                     .Take(count)
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 var fallback = fill.Select(ProductListMapper.ToListItem).ToList();

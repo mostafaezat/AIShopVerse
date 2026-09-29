@@ -14,6 +14,8 @@ import { CategoryService } from '../../core/services/category.service';
       <table>
         <thead><tr><th>Name (EN)</th><th>Name (AR)</th><th>Parent</th><th>Description</th><th>Order</th><th>Active</th><th>Actions</th></tr></thead>
         <tbody>
+          <tr *ngIf="loading"><td colspan="7">Loading categories...</td></tr>
+          <tr *ngIf="!loading && loadError"><td colspan="7">Unable to load categories. <button (click)="loadCategories()">Retry</button></td></tr>
           <tr *ngFor="let cat of categories">
             <td>{{ cat.nameEN }}</td>
             <td>{{ cat.nameAR }}</td>
@@ -28,7 +30,7 @@ import { CategoryService } from '../../core/services/category.service';
           </tr>
         </tbody>
       </table>
-      <div *ngIf="categories.length === 0">No categories found.</div>
+      <div *ngIf="!loading && !loadError && categories.length === 0">No categories found.</div>
     </div>
 
     <div *ngIf="showForm" class="modal">
@@ -48,8 +50,8 @@ import { CategoryService } from '../../core/services/category.service';
         <div *ngIf="form.id"><label><input type="checkbox" [(ngModel)]="form.isActive"> Active</label></div>
       </div>
       <div>
-        <button [disabled]="!form.nameEN" (click)="saveCategory()">Save</button>
-        <button (click)="showForm = false">Cancel</button>
+        <button [disabled]="!form.nameEN || saving" (click)="saveCategory()">{{ saving ? 'Saving...' : 'Save' }}</button>
+        <button (click)="showForm = false" [disabled]="saving">Cancel</button>
       </div>
     </div>
   `
@@ -58,13 +60,28 @@ export class CategoryListComponent implements OnInit {
   categories: any[] = [];
   showForm = false;
   form: any = {};
+  loading = true;
+  loadError = false;
+  saving = false;
 
   constructor(private categoryService: CategoryService) {}
 
   ngOnInit() { this.loadCategories(); }
 
   loadCategories() {
-    this.categoryService.getAll().subscribe(res => this.categories = res.data || []);
+    this.loading = true;
+    this.loadError = false;
+    this.categoryService.getAll().subscribe({
+      next: res => {
+        this.categories = res.data || [];
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.loadError = true;
+        this.categories = [];
+      }
+    });
   }
 
   parentName(id?: string): string | null {
@@ -88,8 +105,13 @@ export class CategoryListComponent implements OnInit {
   }
 
   saveCategory() {
+    if (this.saving) return;
+    const nameEN = (this.form.nameEN || '').trim();
+    const nameAR = (this.form.nameAR || '').trim();
+    if (!nameEN) { alert('English name is required.'); return; }
+    if (!nameAR) { alert('Arabic name is required.'); return; }
     const payload = {
-      nameEN: this.form.nameEN, nameAR: this.form.nameAR, description: this.form.description || null,
+      nameEN, nameAR, description: this.form.description || null,
       imageUrl: this.form.imageUrl || null, parentId: this.form.parentId || null,
       displayOrder: this.form.displayOrder || 0, isActive: this.form.isActive
     };
@@ -97,15 +119,18 @@ export class CategoryListComponent implements OnInit {
       ? this.categoryService.update({ ...payload, id: this.form.id })
       : this.categoryService.add(payload);
 
+    this.saving = true;
     call.subscribe({
-      next: () => { alert('Saved'); this.showForm = false; this.loadCategories(); },
-      error: () => alert('Failed to save')
+      next: () => { this.saving = false; alert('Saved'); this.showForm = false; this.loadCategories(); },
+      error: (err: any) => { this.saving = false; alert(err?.error?.message || 'Failed to save'); }
     });
   }
 
   deleteCategory(id: string) {
-    if (confirm('Delete this category?')) {
-      this.categoryService.delete(id).subscribe(() => this.loadCategories());
-    }
+    if (!confirm('Delete this category?')) return;
+    this.categoryService.delete(id).subscribe({
+      next: () => { alert('Category deleted.'); this.loadCategories(); },
+      error: (err: any) => alert(err?.error?.message || 'Failed to delete category')
+    });
   }
 }

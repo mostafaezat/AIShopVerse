@@ -56,9 +56,9 @@ import { ToastrService } from 'ngx-toastr';
               </div>
             </a>
             <button class="add-to-cart-btn"
-                    [disabled]="product.stockQuantity === 0"
+                    [disabled]="product.stockQuantity === 0 || addingIds.has(product.id)"
                     (click)="addToCart(product, $event)">
-              {{ product.stockQuantity === 0 ? 'Out of Stock' : 'Add to Cart' }}
+              {{ product.stockQuantity === 0 ? 'Out of Stock' : (addingIds.has(product.id) ? 'Adding...' : 'Add to Cart') }}
             </button>
           </div>
         </div>
@@ -138,6 +138,7 @@ export class ProductSliderComponent implements OnInit, AfterViewInit, OnDestroy 
 
   isAtStart = true;
   isAtEnd = false;
+  addingIds = new Set<string>();
 
   private isDragging = false;
   private startX = 0;
@@ -185,7 +186,7 @@ export class ProductSliderComponent implements OnInit, AfterViewInit, OnDestroy 
     event.preventDefault();
     event.stopPropagation();
     if (!this.auth.isLoggedIn()) {
-      this.router.navigate(['/login']);
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
       return;
     }
     if (product.stockQuantity === 0) return;
@@ -193,9 +194,17 @@ export class ProductSliderComponent implements OnInit, AfterViewInit, OnDestroy 
       this.router.navigate(['/products', product.id]);
       return;
     }
+    if (this.addingIds.has(product.id)) return;
+    this.addingIds.add(product.id);
     this.cartService.addToCart(product.id, 1).subscribe({
-      next: () => this.toastr.success('Added to cart', 'Success'),
-      error: () => this.toastr.error('Failed to add to cart', 'Error')
+      next: () => {
+        this.addingIds.delete(product.id);
+        this.toastr.success('Added to cart', 'Success');
+      },
+      error: (err) => {
+        this.addingIds.delete(product.id);
+        this.toastr.error(err?.error?.message || err?.message || 'Failed to add to cart', 'Error');
+      }
     });
   }
 

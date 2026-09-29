@@ -10,6 +10,7 @@ import { BrandService } from '../../core/services/brand.service';
 import { ProductFilterService } from '../../core/services/product-filter.service';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ToastrService } from 'ngx-toastr';
 
 describe('ProductListComponent', () => {
   let component: ProductListComponent;
@@ -42,6 +43,7 @@ describe('ProductListComponent', () => {
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } },
         { provide: AuthService, useValue: { isLoggedIn: () => false } },
         { provide: WishlistService, useValue: { getWishlist: () => of([]), addToWishlist: () => of({}), removeFromWishlist: () => of({}) } },
+        { provide: ToastrService, useValue: jasmine.createSpyObj('ToastrService', ['success', 'error', 'warning', 'info']) },
         ProductFilterService
       ]
     }).compileComponents();

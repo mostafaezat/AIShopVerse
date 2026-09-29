@@ -29,6 +29,7 @@ namespace Application.Features.ProductFeatures.Queries
                     .OrderByDescending(p => (p.Price - p.DiscountPrice!.Value) / p.Price)
                     .ThenByDescending(p => p.CreatedAt)
                     .Take(count)
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 return Result<List<ProductListItemDto>>.Success(

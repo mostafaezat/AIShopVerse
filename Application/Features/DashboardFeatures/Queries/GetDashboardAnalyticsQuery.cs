@@ -24,21 +24,27 @@ namespace Application.Features.DashboardFeatures.Queries
                     ? DateTime.UtcNow.AddDays(-request.Days.Value)
                     : DateTime.MinValue;
 
-                var ordersQuery = _unitOfWork.Repository<Order>().FindAll();
-                var orders = await ordersQuery.OrderByDescending(o => o.CreatedAt).ToListAsync(cancellationToken);
-                var ordersInRangeList = orders.Where(o => o.CreatedAt >= fromDate).ToList();
+                var ordersQuery = _unitOfWork.Repository<Order>().FindAll().AsNoTracking();
+
+                if (request.Days.HasValue)
+                    ordersQuery = ordersQuery.Where(o => o.CreatedAt >= fromDate);
+
+                var orders = await ordersQuery
+                    .OrderByDescending(o => o.CreatedAt)
+                    .ToListAsync(cancellationToken);
 
                 var countedStatuses = new[] { OrderStatus.Cancelled, OrderStatus.Refunded };
-                var revenueOrders = ordersInRangeList.Where(o => !countedStatuses.Contains(o.Status));
+                var revenueOrders = orders.Where(o => !countedStatuses.Contains(o.Status));
 
                 var totalRevenue = revenueOrders.Sum(o => o.Total);
-                var totalOrders = ordersInRangeList.Count;
+                var totalOrders = orders.Count;
 
                 var topProductCount = Math.Max(1, request.TopProductCount);
 
-                var orderIdsInRange = ordersInRangeList.Select(o => o.Id).ToList();
+                var orderIdsInRange = orders.Select(o => o.Id).ToList();
                 var orderItems = await _unitOfWork.Repository<OrderItem>()
                     .FindByCondition(i => orderIdsInRange.Contains(i.OrderId))
+                    .AsNoTracking()
                     .ToListAsync(cancellationToken);
 
                 var topProducts = orderItems
@@ -57,6 +63,7 @@ namespace Application.Features.DashboardFeatures.Queries
                     .FindByCondition(p => p.StockQuantity <= 10)
                     .OrderBy(p => p.StockQuantity)
                     .Take(topProductCount)
+                    .AsNoTracking()
                     .Select(p => new LowStockProductDto
                     {
                         ProductId = p.Id,
@@ -84,13 +91,13 @@ namespace Application.Features.DashboardFeatures.Queries
                     ordersByStatus.Add(new OrderStatusCountDto
                     {
                         Status = status.ToString(),
-                        Count = ordersInRangeList.Count(o => o.Status == status)
+                        Count = orders.Count(o => o.Status == status)
                     });
                 }
 
                 var revenueOverTime = BuildRevenueSeries(revenueOrders, request.Days);
 
-                var recentOrders = ordersInRangeList
+                var recentOrders = orders
                     .OrderByDescending(o => o.CreatedAt)
                     .Take(8)
                     .Select(o => new RecentOrderDto
