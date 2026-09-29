@@ -62,7 +62,7 @@ export class OrderDetailComponent implements OnInit, OnDestroy {
     this.pollStatus();
   }
 
-  private loadOrder() {
+  loadOrder() {
     this.loading = true;
     this.loadError = false;
     this.orderService.getById(this.orderId).subscribe({

@@ -228,7 +228,7 @@ try
             spaBranch.UseSpa(spa =>
             {
                 spa.Options.SourcePath = "../AIShopVerse.EndUser.client";
-                spa.UseProxyToSpaDevelopmentServer("https://localhost:4000");
+                spa.UseProxyToSpaDevelopmentServer("http://localhost:4201");
             });
         });
     }

@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <SpaRoot>..\AIShopVerse.EndUser.client</SpaRoot>
     <SpaProxyLaunchCommand>npm start</SpaProxyLaunchCommand>
-    <SpaProxyServerUrl>https://localhost:4000</SpaProxyServerUrl>
+    <SpaProxyServerUrl>http://localhost:4201</SpaProxyServerUrl>
   </PropertyGroup>
 
   <ItemGroup>
