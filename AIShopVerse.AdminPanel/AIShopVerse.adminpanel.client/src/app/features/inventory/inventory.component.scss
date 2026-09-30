@@ -1,0 +1,44 @@
+.inventory-container {
+  .table th {
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--bs-gray-600);
+    border-bottom: 2px solid var(--bs-gray-200);
+  }
+
+  .table td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+  }
+
+  .table td code {
+    font-size: 0.8rem;
+  }
+
+  .table .badge {
+    font-size: 0.85rem;
+    padding: 0.35em 0.65em;
+  }
+
+  .table input.form-control-sm {
+    max-width: 100px;
+  }
+
+  .table td:last-child {
+    white-space: nowrap;
+  }
+
+  .alert {
+    border-radius: 0.5rem;
+  }
+
+  .btn {
+    transition: all 0.2s ease;
+  }
+}
+
+.badge.bg-success { background-color: #198754 !important; }
+.badge.bg-warning { background-color: #ffc107 !important; color: #000 !important; }
+.badge.bg-danger { background-color: #dc3545 !important; }

@@ -1,0 +1,15 @@
+<div class="confirm-dialog">
+  <div class="confirm-icon mb-3">
+    <i class="bi {{ icon }} display-4 {{ iconColor }}"></i>
+  </div>
+  <h4 class="confirm-title mb-2">{{ title }}</h4>
+  <p class="confirm-message text-muted mb-4">{{ message }}</p>
+  <div class="confirm-actions d-flex gap-2 justify-content-end">
+    <button type="button" class="btn btn-secondary" (click)="onCancel.emit()">
+      <i class="bi bi-x-lg me-1"></i>{{ cancelText }}
+    </button>
+    <button type="button" class="btn btn-{{ confirmVariant }}" (click)="onConfirm.emit()">
+      <i class="bi {{ confirmIcon }} me-1"></i>{{ confirmText }}
+    </button>
+  </div>
+</div>

@@ -1,0 +1,72 @@
+.promotion-form-container {
+  max-width: 900px;
+  margin: 0 auto;
+
+  .form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--bs-gray-700);
+    margin-bottom: 0.375rem;
+  }
+
+  .form-control,
+  .form-select {
+    border-radius: 0.5rem;
+    border: 1px solid var(--bs-gray-300);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
+    &:focus {
+      border-color: var(--bs-primary);
+      box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.15);
+    }
+
+    &.is-invalid {
+      border-color: var(--bs-danger);
+    }
+  }
+
+  .form-text {
+    font-size: 0.75rem;
+    color: var(--bs-gray-500);
+    margin-top: 0.25rem;
+  }
+
+  .form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    margin-top: 0.15rem;
+  }
+
+  .form-check-label {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--bs-gray-700);
+  }
+
+  .btn {
+    min-width: 120px;
+    padding: 0.625rem 1.5rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .invalid-feedback {
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+
+  .needs-validation {
+    &:not(.was-validated) .form-control:invalid {
+      border-color: var(--bs-gray-300);
+    }
+  }
+
+  hr {
+    margin: 1.5rem 0;
+    border-color: var(--bs-gray-200);
+  }
+}

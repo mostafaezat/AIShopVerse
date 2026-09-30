@@ -11,6 +11,10 @@ export class PromotionService {
     return this.http.post(`${environment.apiEndpoint}promotion/GetAll`, {});
   }
 
+  getById(id: string): Observable<any> {
+    return this.http.get(`${environment.apiEndpoint}promotion/GetById/${id}`);
+  }
+
   add(coupon: any): Observable<any> {
     return this.http.post(`${environment.apiEndpoint}promotion/Add`, coupon);
   }

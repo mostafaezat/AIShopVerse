@@ -1,0 +1,85 @@
+<div class="order-list-container container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <h2 class="mb-0 fw-bold">Order Management</h2>
+    <div class="d-flex gap-2">
+      <select class="form-select form-select-sm" style="width: auto;" [(ngModel)]="statusFilter" (ngModelChange)="loadOrders()">
+        <option value="">All Status</option>
+        <option value="0">Pending</option>
+        <option value="1">Paid</option>
+        <option value="2">Processing</option>
+        <option value="3">Shipped</option>
+        <option value="4">Delivered</option>
+        <option value="5">Cancelled</option>
+        <option value="6">Refunded</option>
+      </select>
+      <button class="btn btn-outline-secondary" (click)="loadOrders()" [disabled]="loading">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <app-loading [show]="loading" message="Loading orders..." [fullscreen]="false"></app-loading>
+
+  <div *ngIf="!loading && loadError" class="alert alert-warning d-flex justify-content-between align-items-center">
+    <span>Unable to load orders.</span>
+    <button class="btn btn-sm btn-outline-primary" (click)="loadOrders()">
+      <i class="bi bi-arrow-clockwise me-1"></i> Retry
+    </button>
+  </div>
+
+  <app-empty-state *ngIf="!loading && !loadError && orders.length === 0"
+    icon="bi-cart-check"
+    title="No Orders Found"
+    message="No orders match the current filter.">
+  </app-empty-state>
+
+  <div class="table-responsive" *ngIf="!loading && !loadError && orders.length > 0">
+    <table class="table table-hover table-striped align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Order #</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Total</th>
+          <th style="width: 220px;" class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of orders">
+          <td>
+            <a routerLink="/orders/{{ order.id }}" class="fw-monospace text-decoration-none">
+              {{ order.orderNumber }}
+            </a>
+          </td>
+          <td>{{ order.createdAt | date:'medium' }}</td>
+          <td>
+            <span class="badge" [class]="getStatusBadgeClass(order.status)">
+              {{ order.status }}
+            </span>
+          </td>
+          <td class="fw-bold">{{ order.total | currency }}</td>
+          <td class="text-end">
+            <div class="d-flex gap-2 justify-content-end flex-wrap">
+              <select class="form-select form-select-sm" style="width: auto;"
+                [(ngModel)]="selectedStatus[order.id]"
+                (ngModelChange)="updateStatus(order, $event)"
+                [disabled]="statusBusy.has(order.id)">
+                <option value="{{ order.status }}" disabled selected>{{ order.status }}</option>
+                <option *ngFor="let opt of getStatusOptions(order.status)" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+              <button *ngIf="isRefundable(order.status)" class="btn btn-sm btn-outline-danger"
+                (click)="confirmRefund(order)" [disabled]="refundingId === order.id" title="Refund">
+                <i class="bi bi-cash-stack"></i>
+                <span *ngIf="refundingId !== order.id">Refund</span>
+                <span *ngIf="refundingId === order.id" class="spinner-border spinner-border-sm"></span>
+              </button>
+              <a routerLink="/orders/{{ order.id }}" class="btn btn-sm btn-outline-primary" title="View Details">
+                <i class="bi bi-eye"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

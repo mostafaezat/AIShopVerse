@@ -11,6 +11,10 @@ export class BrandService {
     return this.http.post(`${environment.apiEndpoint}brand/GetAll`, {});
   }
 
+  getById(id: string): Observable<any> {
+    return this.http.get(`${environment.apiEndpoint}brand/GetById/${id}`);
+  }
+
   add(brand: any): Observable<any> {
     return this.http.post(`${environment.apiEndpoint}brand/Add`, brand);
   }

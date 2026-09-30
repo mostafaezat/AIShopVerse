@@ -11,6 +11,10 @@ export class CategoryService {
     return this.http.post(`${environment.apiEndpoint}category/GetAll`, {});
   }
 
+  getById(id: string): Observable<any> {
+    return this.http.get(`${environment.apiEndpoint}category/GetById/${id}`);
+  }
+
   add(category: any): Observable<any> {
     return this.http.post(`${environment.apiEndpoint}category/Add`, category);
   }

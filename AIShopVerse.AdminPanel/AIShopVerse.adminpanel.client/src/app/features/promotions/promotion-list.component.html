@@ -1,0 +1,90 @@
+<div class="promotion-list-container container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0 fw-bold">Promotions & Coupons</h2>
+    <button class="btn btn-primary" (click)="navigateToAdd()">
+      <i class="bi bi-plus-lg me-1"></i> Add Coupon
+    </button>
+  </div>
+
+  <app-loading [show]="loading" message="Loading coupons..." [fullscreen]="false"></app-loading>
+
+  <div *ngIf="!loading && loadError" class="alert alert-warning d-flex justify-content-between align-items-center">
+    <span>Unable to load coupons.</span>
+    <button class="btn btn-sm btn-outline-primary" (click)="loadCoupons()">
+      <i class="bi bi-arrow-clockwise me-1"></i> Retry
+    </button>
+  </div>
+
+  <app-empty-state *ngIf="!loading && !loadError && coupons.length === 0"
+    icon="bi-ticket-perforated"
+    title="No Coupons Found"
+    message="Create your first coupon to start offering discounts.">
+    <button class="btn btn-primary" (click)="navigateToAdd()">
+      <i class="bi bi-plus-lg me-1"></i> Add Coupon
+    </button>
+  </app-empty-state>
+
+  <div class="table-responsive" *ngIf="!loading && !loadError && coupons.length > 0">
+    <table class="table table-hover table-striped align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Code</th>
+          <th>Type</th>
+          <th>Value</th>
+          <th>Min Order</th>
+          <th>Usage</th>
+          <th>Valid From</th>
+          <th>Valid To</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let coupon of coupons">
+          <td class="fw-monospace">{{ coupon.code }}</td>
+          <td>
+            <span class="badge" [class]="coupon.discountType === 0 ? 'bg-info' : 'bg-primary'">
+              {{ coupon.discountType === 0 ? 'Percentage' : 'Fixed Amount' }}
+            </span>
+          </td>
+          <td>
+            <span class="fw-medium">
+              {{ coupon.discountType === 0 ? coupon.discountValue + '%' : coupon.discountValue | currency }}
+            </span>
+          </td>
+          <td>{{ coupon.minOrderValue ? (coupon.minOrderValue | currency) : '—' }}</td>
+          <td>
+            <span class="text-muted">{{ coupon.usedCount || 0 }}</span>
+            <span class="text-muted mx-1">/</span>
+            <span class="text-muted">{{ coupon.maxUses || '∞' }}</span>
+          </td>
+          <td>{{ coupon.validFrom | date:'mediumDate' }}</td>
+          <td>{{ coupon.validTo | date:'mediumDate' }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge" [class]="coupon.isActive ? 'bg-success' : 'bg-secondary'">
+                {{ coupon.isActive ? 'Active' : 'Inactive' }}
+              </span>
+              <button class="btn btn-sm btn-outline-secondary"
+                (click)="toggleCoupon(coupon)"
+                [disabled]="togglingId === coupon.id"
+                title="{{ coupon.isActive ? 'Deactivate' : 'Activate' }}">
+                <i class="bi" [class]="coupon.isActive ? 'bi-pause-fill' : 'bi-play-fill'"></i>
+              </button>
+            </div>
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm" role="group">
+              <button class="btn btn-outline-primary" (click)="navigateToEdit(coupon.id)" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-danger" (click)="confirmDelete(coupon)" title="Delete">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

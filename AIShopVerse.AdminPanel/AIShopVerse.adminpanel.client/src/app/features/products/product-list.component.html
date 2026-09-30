@@ -1,0 +1,129 @@
+<div class="product-list-container container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <h2 class="mb-0 fw-bold">Products</h2>
+    <div class="d-flex gap-2 flex-wrap">
+      <div class="input-group" style="width: 300px;">
+        <input type="text" class="form-control form-control-sm" placeholder="Search products..."
+          [(ngModel)]="searchTerm" (keyup.enter)="loadProducts()" [disabled]="loading">
+        <button class="btn btn-outline-secondary" type="button" (click)="loadProducts()" [disabled]="loading">
+          <i class="bi bi-search"></i>
+        </button>
+      </div>
+      <button class="btn btn-primary" (click)="navigateToAdd()" [disabled]="loading">
+        <i class="bi bi-plus-lg me-1"></i> Add Product
+      </button>
+    </div>
+  </div>
+
+  <app-loading [show]="loading" message="Loading products..." [fullscreen]="false"></app-loading>
+
+  <div *ngIf="!loading && loadError" class="alert alert-warning d-flex justify-content-between align-items-center">
+    <span>Unable to load products.</span>
+    <button class="btn btn-sm btn-outline-primary" (click)="loadProducts()">
+      <i class="bi bi-arrow-clockwise me-1"></i> Retry
+    </button>
+  </div>
+
+  <app-empty-state *ngIf="!loading && !loadError && products.length === 0"
+    icon="bi-box-seam"
+    title="No Products Found"
+    message="Start building your catalog by adding products.">
+    <button class="btn btn-primary" (click)="navigateToAdd()">
+      <i class="bi bi-plus-lg me-1"></i> Add Product
+    </button>
+  </app-empty-state>
+
+  <div class="table-responsive" *ngIf="!loading && !loadError && products.length > 0">
+    <table class="table table-hover table-striped align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th style="width: 60px;">Image</th>
+          <th>Name</th>
+          <th>SKU</th>
+          <th>Price</th>
+          <th>Stock</th>
+          <th>Category</th>
+          <th>Brand</th>
+          <th style="width: 80px;">Status</th>
+          <th style="width: 180px;" class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let product of products">
+          <td>
+            <div class="product-image-wrapper">
+              <img [src]="product.primaryImageUrl || placeholderImage" alt="{{ product.nameEN }}"
+                class="product-image" (error)="onImageError($event)">
+            </div>
+          </td>
+          <td class="fw-medium">{{ product.nameEN }}</td>
+          <td><code class="text-muted">{{ product.sku }}</code></td>
+          <td>
+            <ng-container *ngIf="product.discountPrice">
+              <span class="text-decoration-line-through text-muted me-2">{{ product.price | currency }}</span>
+            </ng-container>
+            <strong>{{ (product.discountPrice ?? product.price) | currency }}</strong>
+          </td>
+          <td>
+            <span class="badge" [class]="getStockBadgeClass(product.stockQuantity)">
+              {{ product.stockQuantity }}
+            </span>
+          </td>
+          <td>{{ product.categoryName }}</td>
+          <td>{{ product.brandName || '—' }}</td>
+          <td>
+            <span class="badge" [class]="product.isActive ? 'bg-success' : 'bg-secondary'">
+              {{ product.isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm" role="group">
+              <button class="btn btn-outline-primary" (click)="navigateToEdit(product.id)" title="Edit">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-outline-info" (click)="openStockModal(product)" title="Adjust Stock">
+                <i class="bi bi-box-seam"></i>
+              </button>
+              <button class="btn btn-outline-danger" (click)="confirmDelete(product)" title="Delete">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Stock Adjustment Modal -->
+  <app-modal #stockModal [modalId]="'stock-modal'" [title]="'Adjust Stock'" [size]="'modal-lg'">
+    <div *ngIf="stockProduct" class="stock-adjustment-form">
+      <div class="mb-3">
+        <strong>{{ stockProduct.nameEN }}</strong>
+        <p class="text-muted mb-3">Current stock: <strong>{{ stockProduct.stockQuantity }}</strong></p>
+
+        <div class="mb-3">
+          <label for="stockDelta" class="form-label fw-medium">Quantity Change <span class="text-danger">*</span></label>
+          <input type="number" class="form-control" id="stockDelta" [(ngModel)]="stockDelta" placeholder="+/- quantity">
+          <div class="form-text">Use positive numbers to add stock, negative to reduce.</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="stockReason" class="form-label fw-medium">Reason <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="stockReason" [(ngModel)]="stockReason" placeholder="e.g. restock, damaged, return">
+        </div>
+      </div>
+
+      <ng-template modal-footer>
+        <button type="button" class="btn btn-outline-secondary" (click)="closeStockModal()">
+          <i class="bi bi-x-lg me-1"></i> Cancel
+        </button>
+        <button type="button" class="btn btn-primary" (click)="applyStock()" [disabled]="adjusting || !stockDelta">
+          <span *ngIf="!adjusting"><i class="bi bi-check-lg me-1"></i> Apply</span>
+          <span *ngIf="adjusting" class="d-flex align-items-center gap-1">
+            <span class="spinner-border spinner-border-sm" role="status"></span> Applying...
+          </span>
+        </button>
+      </ng-template>
+    </div>
+  </app-modal>
+</div>

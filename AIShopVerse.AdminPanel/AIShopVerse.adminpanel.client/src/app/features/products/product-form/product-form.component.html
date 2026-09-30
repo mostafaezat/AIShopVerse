@@ -1,0 +1,261 @@
+<div class="product-form-container container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <h2 class="mb-0 fw-bold">{{ isEdit ? 'Edit Product' : 'Add Product' }}</h2>
+    <a class="btn btn-outline-secondary" routerLink="/products">
+      <i class="bi bi-arrow-left me-1"></i> Back to List
+    </a>
+  </div>
+
+  <app-loading [show]="saving" message="{{ isEdit ? 'Updating...' : 'Creating...' }}" [fullscreen]="false"></app-loading>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="needs-validation" novalidate>
+    <!-- Basic Info Section -->
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0 fw-semibold">Basic Information</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="nameEN" class="form-label fw-medium">Name (English) <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="nameEN" formControlName="nameEN" placeholder="Product name in English"
+              [class.is-invalid]="submitted && f['nameEN'].errors">
+            <div class="invalid-feedback" *ngIf="submitted && f['nameEN'].errors?.['required']">
+              English name is required.
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="nameAR" class="form-label fw-medium">Name (Arabic) <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="nameAR" formControlName="nameAR" placeholder="اسم المنتج بالعربية"
+              [class.is-invalid]="submitted && f['nameAR'].errors">
+            <div class="invalid-feedback" *ngIf="submitted && f['nameAR'].errors?.['required']">
+              Arabic name is required.
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="sku" class="form-label fw-medium">SKU <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="sku" formControlName="sku" placeholder="Unique SKU"
+              [class.is-invalid]="submitted && f['sku'].errors">
+            <div class="invalid-feedback" *ngIf="submitted && f['sku'].errors?.['required']">
+              SKU is required.
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="categoryId" class="form-label fw-medium">Category <span class="text-danger">*</span></label>
+            <select class="form-select" id="categoryId" formControlName="categoryId"
+              [class.is-invalid]="submitted && f['categoryId'].errors">
+              <option [ngValue]="null" disabled>Select a category...</option>
+              <option *ngFor="let cat of categories" [ngValue]="cat.id">{{ cat.nameEN }}</option>
+            </select>
+            <div class="invalid-feedback" *ngIf="submitted && f['categoryId'].errors?.['required']">
+              Category is required.
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <label for="brandId" class="form-label fw-medium">Brand</label>
+            <select class="form-select" id="brandId" formControlName="brandId">
+              <option [ngValue]="null">None</option>
+              <option *ngFor="let brand of brands" [ngValue]="brand.id">{{ brand.nameEN }}</option>
+            </select>
+          </div>
+
+          <div class="col-12">
+            <label for="descriptionEN" class="form-label fw-medium">Description (English)</label>
+            <textarea class="form-control" id="descriptionEN" formControlName="descriptionEN" rows="3"
+              placeholder="Product description in English"></textarea>
+          </div>
+
+          <div class="col-12">
+            <label for="descriptionAR" class="form-label fw-medium">Description (Arabic)</label>
+            <textarea class="form-control" id="descriptionAR" formControlName="descriptionAR" rows="3"
+              placeholder="وصف المنتج بالعربية"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pricing & Inventory Section -->
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0 fw-semibold">Pricing & Inventory</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label for="price" class="form-label fw-medium">Price <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-currency-dollar"></i></span>
+              <input type="number" class="form-control" id="price" formControlName="price" min="0.01" step="0.01"
+                [class.is-invalid]="submitted && f['price'].errors">
+            </div>
+            <div class="invalid-feedback" *ngIf="submitted && f['price'].errors?.['required']">
+              Price is required.
+            </div>
+            <div class="invalid-feedback" *ngIf="submitted && f['price'].errors?.['min']">
+              Price must be greater than 0.
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="discountPrice" class="form-label fw-medium">Discount Price</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-currency-dollar"></i></span>
+              <input type="number" class="form-control" id="discountPrice" formControlName="discountPrice" min="0" step="0.01">
+            </div>
+            <div class="form-text">Must be lower than regular price. Leave empty for no discount.</div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="stockQuantity" class="form-label fw-medium">Stock Quantity <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="stockQuantity" formControlName="stockQuantity" min="0"
+              [class.is-invalid]="submitted && f['stockQuantity'].errors">
+            <div class="invalid-feedback" *ngIf="submitted && f['stockQuantity'].errors?.['required']">
+              Stock quantity is required.
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="lowStockThreshold" class="form-label fw-medium">Low Stock Threshold</label>
+            <input type="number" class="form-control" id="lowStockThreshold" formControlName="lowStockThreshold" min="0"
+              placeholder="Override global setting">
+            <div class="form-text">Leave empty to use global threshold.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Variants Section -->
+    <div class="card mb-4">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-semibold">Variants</h5>
+        <button type="button" class="btn btn-sm btn-outline-primary" (click)="addVariant()" [disabled]="saving">
+          <i class="bi bi-plus-lg me-1"></i> Add Variant
+        </button>
+      </div>
+      <div class="card-body">
+        <div *ngIf="variantsArray.length === 0" class="text-center text-muted py-4">
+          <i class="bi bi-tag display-4 d-block mb-2 text-muted"></i>
+          No variants added. Add variants for different sizes, colors, etc.
+        </div>
+        <div class="table-responsive" *ngIf="variantsArray.length > 0">
+          <table class="table table-sm table-bordered align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 100px;">Size</th>
+                <th style="width: 100px;">Color</th>
+                <th style="width: 150px;">SKU</th>
+                <th style="width: 100px;">Price</th>
+                <th style="width: 100px;">Stock</th>
+                <th style="width: 60px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody formArrayName="variants">
+              <tr *ngFor="let variant of variantsArray.controls; let i = index" [formGroupName]="i">
+                <td>
+                  <input type="text" class="form-control form-control-sm" formControlName="size" placeholder="Size" maxlength="20">
+                </td>
+                <td>
+                  <input type="text" class="form-control form-control-sm" formControlName="color" placeholder="Color" maxlength="30">
+                </td>
+                <td>
+                  <input type="text" class="form-control form-control-sm" formControlName="sku" placeholder="SKU" maxlength="50">
+                </td>
+                <td>
+                  <input type="number" class="form-control form-control-sm" formControlName="price" min="0" step="0.01">
+                </td>
+                <td>
+                  <input type="number" class="form-control form-control-sm" formControlName="stockQuantity" min="0">
+                </td>
+                <td class="text-center">
+                  <button type="button" class="btn btn-sm btn-outline-danger" (click)="removeVariant(i)" title="Remove">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Images Section -->
+    <div class="card mb-4">
+      <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-semibold">Images</h5>
+        <div>
+          <input type="file" class="form-control form-control-sm" accept="image/*" multiple (change)="onFilesSelected($event)" [disabled]="saving">
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row g-2" *ngIf="imageUrlsArray.length > 0">
+          <div class="col-6 col-md-4 col-lg-3" *ngFor="let url of imageUrlsArray.controls; let i = index" [formGroupName]="i">
+            <div class="position-relative">
+              <img [src]="url.value" alt="Product image" class="img-fluid rounded">
+              <button type="button" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" (click)="removeImage(i)" title="Remove">
+                <i class="bi bi-trash"></i>
+              </button>
+              <div *ngIf="i === 0" class="badge bg-primary position-absolute top-0 start-0 m-1">Primary</div>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="imageUrlsArray.length === 0" class="text-center text-muted py-4">
+          <i class="bi bi-image display-4 d-block mb-2 text-muted"></i>
+          No images uploaded. First image becomes the primary image.
+        </div>
+        <div class="form-text mt-2">First image becomes the primary image. Click to remove.</div>
+      </div>
+    </div>
+
+    <!-- Status Section -->
+    <div class="card mb-4" *ngIf="isEdit">
+      <div class="card-header bg-light">
+        <h5 class="mb-0 fw-semibold">Status</h5>
+      </div>
+      <div class="card-body">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="isActive" formControlName="isActive">
+          <label class="form-check-label fw-medium" for="isActive">Active (visible in storefront)</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Low Stock Threshold -->
+    <div class="card mb-4">
+      <div class="card-header bg-light">
+        <h5 class="mb-0 fw-semibold">Advanced Settings</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="lowStockThreshold" class="form-label fw-medium">Low Stock Threshold</label>
+            <input type="number" class="form-control" id="lowStockThreshold" formControlName="lowStockThreshold" min="0"
+              placeholder="Override global setting">
+            <div class="form-text">Leave empty to use global threshold.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-outline-secondary" routerLink="/products">
+        <i class="bi bi-x-lg me-1"></i> Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="saving || form.invalid">
+        <span *ngIf="!saving">
+          <i class="bi {{ isEdit ? 'bi-pencil-square' : 'bi-plus-lg' }} me-1"></i>
+          {{ isEdit ? 'Update' : 'Create' }}
+        </span>
+        <span *ngIf="saving" class="d-flex align-items-center gap-1">
+          <span class="spinner-border spinner-border-sm" role="status"></span>
+          {{ isEdit ? 'Updating...' : 'Creating...' }}
+        </span>
+      </button>
+    </div>
+  </form>
+</div>

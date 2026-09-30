@@ -1,0 +1,16 @@
+<div class="modal fade" [id]="modalId" tabindex="-1" aria-hidden="true" [attr.aria-labelledby]="modalId + '-label'">
+  <div class="modal-dialog {{ size }} modal-dialog-centered {{ scrollable ? 'modal-dialog-scrollable' : '' }}">
+    <div class="modal-content">
+      <div class="modal-header" *ngIf="title || showClose">
+        <h5 class="modal-title" [id]="modalId + '-label'">{{ title }}</h5>
+        <button type="button" class="btn-close" (click)="onClose.emit()" *ngIf="showClose" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <ng-content></ng-content>
+      </div>
+      <div class="modal-footer" *ngIf="showFooter">
+        <ng-content select="[modal-footer]"></ng-content>
+      </div>
+    </div>
+  </div>
+</div>

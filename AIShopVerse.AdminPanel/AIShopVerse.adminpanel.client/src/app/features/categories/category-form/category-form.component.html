@@ -1,0 +1,85 @@
+<div class="category-form-container container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0 fw-bold">{{ isEdit ? 'Edit Category' : 'Add Category' }}</h2>
+    <a class="btn btn-outline-secondary" routerLink="/categories">
+      <i class="bi bi-arrow-left me-1"></i> Back to List
+    </a>
+  </div>
+
+  <app-loading [show]="saving" message="{{ isEdit ? 'Updating...' : 'Creating...' }}" [fullscreen]="false"></app-loading>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="needs-validation" novalidate>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label for="nameEN" class="form-label fw-medium">Name (English) <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="nameEN" formControlName="nameEN" placeholder="Category name in English"
+          [class.is-invalid]="submitted && f['nameEN'].errors">
+        <div class="invalid-feedback" *ngIf="submitted && f['nameEN'].errors?.['required']">
+          English name is required.
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="nameAR" class="form-label fw-medium">Name (Arabic) <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="nameAR" formControlName="nameAR" placeholder="الاسم بالعربية"
+          [class.is-invalid]="submitted && f['nameAR'].errors">
+        <div class="invalid-feedback" *ngIf="submitted && f['nameAR'].errors?.['required']">
+          Arabic name is required.
+        </div>
+      </div>
+
+      <div class="col-12">
+        <label for="description" class="form-label fw-medium">Description</label>
+        <textarea class="form-control" id="description" formControlName="description" rows="3"
+          placeholder="Optional description"></textarea>
+      </div>
+
+      <div class="col-12">
+        <label for="imageUrl" class="form-label fw-medium">Image URL</label>
+        <input type="url" class="form-control" id="imageUrl" formControlName="imageUrl" placeholder="https://example.com/image.png">
+        <div class="form-text">Enter a valid image URL. Leave empty for placeholder.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="parentId" class="form-label fw-medium">Parent Category</label>
+        <select class="form-select" id="parentId" formControlName="parentId">
+          <option [ngValue]="null">None (Top Level)</option>
+          <option *ngFor="let cat of categories" [ngValue]="cat.id" [disabled]="cat.id === categoryId">
+            {{ cat.nameEN }}
+          </option>
+        </select>
+        <div class="form-text">Select a parent category for nested hierarchy. Leave empty for top-level.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="displayOrder" class="form-label fw-medium">Display Order</label>
+        <input type="number" class="form-control" id="displayOrder" formControlName="displayOrder" min="0">
+      </div>
+
+      <div class="col-12" *ngIf="isEdit">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="isActive" formControlName="isActive">
+          <label class="form-check-label fw-medium" for="isActive">Active</label>
+        </div>
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <div class="d-flex justify-content-end gap-2">
+      <button type="button" class="btn btn-outline-secondary" routerLink="/categories">
+        <i class="bi bi-x-lg me-1"></i> Cancel
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="saving || form.invalid">
+        <span *ngIf="!saving">
+          <i class="bi {{ isEdit ? 'bi-pencil-square' : 'bi-plus-lg' }} me-1"></i>
+          {{ isEdit ? 'Update' : 'Create' }}
+        </span>
+        <span *ngIf="saving" class="d-flex align-items-center gap-1">
+          <span class="spinner-border spinner-border-sm" role="status"></span>
+          {{ isEdit ? 'Updating...' : 'Creating...' }}
+        </span>
+      </button>
+    </div>
+  </form>
+</div>

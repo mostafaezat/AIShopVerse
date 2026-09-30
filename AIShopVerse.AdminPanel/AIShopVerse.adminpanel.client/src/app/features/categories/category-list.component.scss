@@ -1,0 +1,32 @@
+.category-list-container {
+  .table th {
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--bs-gray-600);
+    border-bottom: 2px solid var(--bs-gray-200);
+  }
+
+  .table td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+  }
+
+  .table td:last-child {
+    white-space: nowrap;
+  }
+
+  .btn-group .btn {
+    padding: 0.25rem 0.5rem;
+  }
+
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+  }
+
+  .btn {
+    transition: all 0.2s ease;
+  }
+}
