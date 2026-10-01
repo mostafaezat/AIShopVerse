@@ -1,0 +1,53 @@
+﻿
+> aishop-verse.end-user.client@0.0.0 build
+> ng build
+
+[33m>[39m Building...
+[32mΓêÜ[39m Building...
+[1mInitial chunk files[22m  [2m | [22m[1mNames[22m                    [2m | [22m [1mRaw size[22m[2m | [22m[1mEstimated transfer size[22m
+[32mstyles-JL7XOR25.css[39m  [2m | [22m[2mstyles[22m                   [2m | [22m[36m253.41 kB[39m[2m | [22m               [36m25.27 kB[39m
+[32mchunk-SBWJONDI.js[39m    [2m | [22m[2m-[22m                        [2m | [22m[36m183.16 kB[39m[2m | [22m               [36m53.21 kB[39m
+[32mchunk-GFVGSF3V.js[39m    [2m | [22m[2m-[22m                        [2m | [22m[36m122.24 kB[39m[2m | [22m               [36m30.51 kB[39m
+[32mchunk-AVT7QO3G.js[39m    [2m | [22m[2m-[22m                        [2m | [22m [36m57.49 kB[39m[2m | [22m               [36m13.09 kB[39m
+[32mpolyfills-FFHMD2TL.js[39m[2m | [22m[2mpolyfills[22m                [2m | [22m [36m34.52 kB[39m[2m | [22m               [36m11.28 kB[39m
+[32mmain-KV54PVYN.js[39m     [2m | [22m[2mmain[22m                     [2m | [22m [36m27.07 kB[39m[2m | [22m                [36m7.27 kB[39m
+[32mchunk-OI7Q3YOH.js[39m    [2m | [22m[2m-[22m                        [2m | [22m [36m19.47 kB[39m[2m | [22m                [36m4.18 kB[39m
+[32mchunk-XAZLOLJU.js[39m    [2m | [22m[2m-[22m                        [2m | [22m  [36m4.05 kB[39m[2m | [22m                [36m1.02 kB[39m
+[32mchunk-RRCTW4XZ.js[39m    [2m | [22m[2m-[22m                        [2m | [22m  [36m3.34 kB[39m[2m | [22m                [36m1.04 kB[39m
+[32mchunk-D5QVJAV4.js[39m    [2m | [22m[2m-[22m                        [2m | [22m  [36m1.44 kB[39m[2m | [22m              [36m561 bytes[39m
+[32mchunk-CBY4AYYQ.js[39m    [2m | [22m[2m-[22m                        [2m | [22m[36m987 bytes[39m[2m | [22m              [36m987 bytes[39m
+
+[1m [22m                    [2m | [22m[1mInitial total[22m            [2m | [22m[1m707.17 kB[22m[2m | [22m              [1m148.41 kB[22m
+
+[1mLazy chunk files[22m     [2m | [22m[1mNames[22m                    [2m | [22m [1mRaw size[22m[2m | [22m[1mEstimated transfer size[22m
+[32mchunk-7LZL7ACS.js[39m    [2m | [22m[2mbrowser[22m                  [2m | [22m [36m63.60 kB[39m[2m | [22m               [36m16.84 kB[39m
+[32mchunk-4CZHBNYB.js[39m    [2m | [22m[2m-[22m                        [2m | [22m [36m37.34 kB[39m[2m | [22m                [36m7.72 kB[39m
+[32mchunk-EXPXWJ7C.js[39m    [2m | [22m[2mproduct-detail-component[22m [2m | [22m [36m19.87 kB[39m[2m | [22m                [36m4.85 kB[39m
+[32mchunk-JEOFS7TT.js[39m    [2m | [22m[2mproduct-list-component[22m   [2m | [22m [36m17.41 kB[39m[2m | [22m                [36m4.82 kB[39m
+[32mchunk-EDAM5TRH.js[39m    [2m | [22m[2mhome-component[22m           [2m | [22m [36m16.59 kB[39m[2m | [22m                [36m4.50 kB[39m
+[32mchunk-RP6MK4R7.js[39m    [2m | [22m[2mregister-component[22m       [2m | [22m [36m12.15 kB[39m[2m | [22m                [36m3.49 kB[39m
+[32mchunk-42K27ZGD.js[39m    [2m | [22m[2mlogin-component[22m          [2m | [22m [36m10.54 kB[39m[2m | [22m                [36m3.21 kB[39m
+[32mchunk-JASX7Q4O.js[39m    [2m | [22m[2mcheckout-component[22m       [2m | [22m [36m10.54 kB[39m[2m | [22m                [36m3.36 kB[39m
+[32mchunk-D33TAS4S.js[39m    [2m | [22m[2mcart-component[22m           [2m | [22m  [36m9.71 kB[39m[2m | [22m                [36m2.68 kB[39m
+[32mchunk-4KRQ6QPT.js[39m    [2m | [22m[2m-[22m                        [2m | [22m  [36m9.53 kB[39m[2m | [22m                [36m2.52 kB[39m
+[32mchunk-L5RZHAUP.js[39m    [2m | [22m[2mreset-password-component[22m [2m | [22m  [36m9.25 kB[39m[2m | [22m                [36m2.54 kB[39m
+[32mchunk-ASDBGIQG.js[39m    [2m | [22m[2mforgot-password-component[22m[2m | [22m  [36m7.59 kB[39m[2m | [22m                [36m2.31 kB[39m
+[32mchunk-IHIJVI7C.js[39m    [2m | [22m[2morder-detail-component[22m   [2m | [22m  [36m4.63 kB[39m[2m | [22m                [36m1.76 kB[39m
+[32mchunk-DFX5JOFV.js[39m    [2m | [22m[2mwishlist-component[22m       [2m | [22m  [36m4.12 kB[39m[2m | [22m                [36m1.55 kB[39m
+[32mchunk-LFUE6GFA.js[39m    [2m | [22m[2morder-history-component[22m  [2m | [22m  [36m2.64 kB[39m[2m | [22m                [36m1.12 kB[39m
+[2m...and 6 more lazy chunks files. Use "--verbose" to show all the files.[22m
+
+Application bundle generation complete. [81.141 seconds]
+
+node.exe : [1m[33m[33mΓû▓ [43;33m[[43;30mWARNING[43;33m][0m [1m1 rules skipped due to selector errors:
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([1m[33m[33mΓ...elector errors::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  .form-floating>~label -> Did not expect successive traversals.[0m
+
+[39m[22m
+Output location: D:\test API\NEWApp\AIShopVerse\AIShopVerse.EndUser\AIShopVerse.EndUser.client\dist\aishop-verse.end-user.client
+

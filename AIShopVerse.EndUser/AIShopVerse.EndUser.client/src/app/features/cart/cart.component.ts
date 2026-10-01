@@ -1,31 +1,33 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ToastrService } from 'ngx-toastr';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { CartService } from '../../core/services/cart.service';
 import { CartDto, CartItemDto } from '../../core/models';
+import { PricePipe } from '../../shared/pipes/localized-format.pipes';
 
 @Component({
   selector: 'app-cart',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe, PricePipe],
   template: `
     <div class="container py-4">
-      <h2 class="mb-4">Shopping Cart</h2>
+      <h2 class="mb-4">{{ 'cart.title' | translate }}</h2>
 
-      <div *ngIf="loading" class="text-center py-5 text-muted">Loading your cart...</div>
+      <div *ngIf="loading" class="text-center py-5 text-muted">{{ 'cart.loading' | translate }}</div>
 
       <div *ngIf="!loading && loadError" class="text-center py-5">
         <div class="alert alert-warning mx-auto" style="max-width:480px;">
-          Unable to load your cart. Please try again.
-          <div class="mt-2"><button class="btn btn-outline-secondary btn-sm" (click)="loadCart()">Retry</button></div>
+          {{ 'cart.loadError' | translate }}
+          <div class="mt-2"><button class="btn btn-outline-secondary btn-sm" (click)="loadCart()">{{ 'common.retry' | translate }}</button></div>
         </div>
       </div>
 
       <div *ngIf="!loading && !loadError && cart && cart.items.length === 0" class="text-center py-5">
-        <h5>Your cart is empty.</h5>
-        <a routerLink="/products" class="btn btn-primary mt-3">Start Shopping</a>
+        <h5>{{ 'cart.empty' | translate }}</h5>
+        <a routerLink="/products" class="btn btn-primary mt-3">{{ 'cart.startShopping' | translate }}</a>
       </div>
 
       <div *ngIf="!loading && !loadError && cart && cart.items.length > 0">
@@ -40,23 +42,29 @@ import { CartDto, CartItemDto } from '../../core/models';
                 <div class="col-md-4">
                   <h6 class="mb-0">{{ item.productName }}</h6>
                   <small *ngIf="item.variantLabel" class="text-muted d-block">{{ item.variantLabel }}</small>
-                  <small class="text-muted">{{ item.unitPrice | currency }}</small>
+                  <small class="text-muted">{{ item.unitPrice | price }}</small>
                 </div>
                 <div class="col-md-3">
                   <div class="input-group input-group-sm">
-                    <button class="btn btn-outline-secondary" (click)="decrease(item)" [disabled]="item.quantity <= 1 || processingIds.has(item.id)">-</button>
+                    <button class="btn btn-outline-secondary" (click)="decrease(item)"
+                            [disabled]="item.quantity <= 1 || processingIds.has(item.id)"
+                            [attr.aria-label]="'cart.decreaseQuantity' | translate">&minus;</button>
                     <input type="number" class="form-control text-center" [value]="item.quantity"
                            (change)="changeQty(item, $event)" min="1" style="max-width:60px;"
+                           [attr.aria-label]="'cart.quantity' | translate"
                            [disabled]="processingIds.has(item.id)">
-                    <button class="btn btn-outline-secondary" (click)="increase(item)" [disabled]="processingIds.has(item.id)">+</button>
+                    <button class="btn btn-outline-secondary" (click)="increase(item)"
+                            [disabled]="processingIds.has(item.id)"
+                            [attr.aria-label]="'cart.increaseQuantity' | translate">+</button>
                   </div>
                 </div>
                 <div class="col-md-2 text-end pe-3">
-                  <strong>{{ item.totalPrice | currency }}</strong>
+                  <strong>{{ item.totalPrice | price }}</strong>
                 </div>
                 <div class="col-md-1 text-center">
                   <button class="btn btn-sm btn-outline-danger" (click)="remove(item)"
-                          [disabled]="processingIds.has(item.id)">x</button>
+                          [disabled]="processingIds.has(item.id)"
+                          [attr.aria-label]="'cart.removeItem' | translate">&times;</button>
                 </div>
               </div>
             </div>
@@ -65,32 +73,33 @@ import { CartDto, CartItemDto } from '../../core/models';
           <div class="col-lg-4">
             <div class="card shadow-sm">
               <div class="card-body">
-                <h5 class="card-title">Order Summary</h5>
+                <h5 class="card-title">{{ 'cart.orderSummary' | translate }}</h5>
                 <div class="mb-3">
-                  <label class="form-label">Coupon Code</label>
+                  <label class="form-label">{{ 'cart.couponCode' | translate }}</label>
                   <div class="input-group">
-                    <input class="form-control" [(ngModel)]="couponInput" placeholder="Enter coupon" [disabled]="couponBusy">
-                    <button class="btn btn-outline-primary" (click)="applyCoupon()" *ngIf="!cart.couponCode" [disabled]="couponBusy">{{ couponBusy ? '...' : 'Apply' }}</button>
-                    <button class="btn btn-outline-secondary" (click)="removeCoupon()" *ngIf="cart.couponCode" [disabled]="couponBusy">{{ couponBusy ? '...' : 'Remove' }}</button>
+                    <input class="form-control" [(ngModel)]="couponInput"
+                           [placeholder]="'cart.couponPlaceholder' | translate" [disabled]="couponBusy">
+                    <button class="btn btn-outline-primary" (click)="applyCoupon()" *ngIf="!cart.couponCode" [disabled]="couponBusy">{{ couponBusy ? '...' : ('common.apply' | translate) }}</button>
+                    <button class="btn btn-outline-secondary" (click)="removeCoupon()" *ngIf="cart.couponCode" [disabled]="couponBusy">{{ couponBusy ? '...' : ('common.remove' | translate) }}</button>
                   </div>
                 </div>
                 <div class="d-flex justify-content-between">
-                  <span>Subtotal</span><span>{{ cart.subtotal | currency }}</span>
+                  <span>{{ 'cart.subtotal' | translate }}</span><span>{{ cart.subtotal | price }}</span>
                 </div>
                 <div class="d-flex justify-content-between text-success" *ngIf="(cart.discountAmount || 0) > 0">
-                  <span>Discount ({{ cart.couponCode }})</span><span>-{{ cart.discountAmount || 0 | currency }}</span>
+                  <span>{{ 'cart.discount' | translate }} ({{ cart.couponCode }})</span><span>-{{ cart.discountAmount || 0 | price }}</span>
                 </div>
                 <div class="d-flex justify-content-between">
-                  <span>Tax</span><span>{{ cart.tax | currency }}</span>
+                  <span>{{ 'cart.tax' | translate }}</span><span>{{ cart.tax | price }}</span>
                 </div>
                 <div class="d-flex justify-content-between">
-                  <span>Shipping</span><span>{{ cart.shippingCost | currency }}</span>
+                  <span>{{ 'cart.shipping' | translate }}</span><span>{{ cart.shippingCost | price }}</span>
                 </div>
                 <hr>
                 <div class="d-flex justify-content-between fw-bold">
-                  <span>Total</span><span>{{ cart.total | currency }}</span>
+                  <span>{{ 'cart.total' | translate }}</span><span>{{ cart.total | price }}</span>
                 </div>
-                <a routerLink="/checkout" class="btn btn-primary w-100 mt-3">Proceed to Checkout</a>
+                <a routerLink="/checkout" class="btn btn-primary w-100 mt-3">{{ 'cart.proceedToCheckout' | translate }}</a>
               </div>
             </div>
           </div>
@@ -100,6 +109,7 @@ import { CartDto, CartItemDto } from '../../core/models';
   `
 })
 export class CartComponent implements OnInit {
+  private translate = inject(TranslateService);
   cart: CartDto | null = null;
   couponInput = '';
   loading = true;
@@ -143,8 +153,7 @@ export class CartComponent implements OnInit {
     if (qty >= 1) {
       this.updateQty(item, qty);
     } else {
-      this.cart = this.cart ? { ...this.cart } : this.cart;
-      this.toastr.warning('Quantity must be at least 1', 'Warning');
+      this.toastr.warning(this.translate.instant('cart.quantityMin'), this.translate.instant('toast.warning'));
     }
   }
 
@@ -158,7 +167,7 @@ export class CartComponent implements OnInit {
       },
       error: (err) => {
         this.processingIds.delete(item.id);
-        this.toastr.error(err?.error?.message || 'Failed to update quantity', 'Error');
+        this.toastr.error(err?.error?.message || err?.message || this.translate.instant('toast.error'), this.translate.instant('common.error'));
       }
     });
   }
@@ -168,7 +177,7 @@ export class CartComponent implements OnInit {
     this.processingIds.add(item.id);
     this.cartService.removeCartItem(item.id).subscribe({
       next: () => {
-        this.toastr.success('Item removed', 'Success');
+        this.toastr.success(this.translate.instant('toast.itemRemoved'), this.translate.instant('common.success'));
         this.cartService.getCart().subscribe(cart => {
           this.cart = cart;
           this.processingIds.delete(item.id);
@@ -176,24 +185,27 @@ export class CartComponent implements OnInit {
       },
       error: (err) => {
         this.processingIds.delete(item.id);
-        this.toastr.error(err?.error?.message || 'Failed to remove item', 'Error');
+        this.toastr.error(err?.error?.message || err?.message || this.translate.instant('toast.error'), this.translate.instant('common.error'));
       }
     });
   }
 
   applyCoupon() {
-    if (!this.couponInput.trim()) { this.toastr.warning('Enter a coupon code', 'Warning'); return; }
+    if (!this.couponInput.trim()) {
+      this.toastr.warning(this.translate.instant('cart.couponPlaceholder'), this.translate.instant('toast.warning'));
+      return;
+    }
     if (this.couponBusy) return;
     this.couponBusy = true;
     this.cartService.applyCoupon(this.couponInput.trim()).subscribe({
       next: cart => {
         this.cart = cart;
         this.couponBusy = false;
-        this.toastr.success('Coupon applied', 'Success');
+        this.toastr.success(this.translate.instant('toast.couponApplied'), this.translate.instant('common.success'));
       },
       error: (err) => {
         this.couponBusy = false;
-        this.toastr.error(err?.error?.message || 'Invalid coupon', 'Error');
+        this.toastr.error(err?.error?.message || err?.message || this.translate.instant('cart.invalidCoupon'), this.translate.instant('common.error'));
       }
     });
   }
@@ -206,11 +218,11 @@ export class CartComponent implements OnInit {
         this.cart = cart;
         this.couponInput = '';
         this.couponBusy = false;
-        this.toastr.success('Coupon removed', 'Success');
+        this.toastr.success(this.translate.instant('toast.couponRemoved'), this.translate.instant('common.success'));
       },
       error: (err) => {
         this.couponBusy = false;
-        this.toastr.error(err?.error?.message || 'Failed to remove coupon', 'Error');
+        this.toastr.error(err?.error?.message || err?.message || this.translate.instant('toast.error'), this.translate.instant('common.error'));
       }
     });
   }

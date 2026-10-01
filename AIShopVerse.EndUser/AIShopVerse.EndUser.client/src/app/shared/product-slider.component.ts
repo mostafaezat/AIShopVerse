@@ -1,25 +1,28 @@
-import { Component, Input, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { Product } from '../core/models';
 import { CartService } from '../core/services/cart.service';
 import { AuthService } from '../core/services/auth.service';
+import { LanguageService } from '../core/services/language.service';
 import { ToastrService } from 'ngx-toastr';
+import { PricePipe } from './pipes/localized-format.pipes';
 
 @Component({
   selector: 'app-product-slider',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslatePipe, PricePipe],
   template: `
     <section class="slider-section" *ngIf="products?.length">
       <div class="slider-header">
-        <h2 class="slider-title">{{ title }}</h2>
+        <h2 class="slider-title">{{ title || (titleKey | translate) }}</h2>
         <div class="slider-controls">
-          <button class="slider-btn" (click)="scrollPrev()" [disabled]="isAtStart" aria-label="Previous">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+          <button class="slider-btn" (click)="scrollPrev()" [disabled]="isAtStart" [attr.aria-label]="'common.previous' | translate">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="arrow-prev"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
-          <button class="slider-btn" (click)="scrollNext()" [disabled]="isAtEnd" aria-label="Next">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          <button class="slider-btn" (click)="scrollNext()" [disabled]="isAtEnd" [attr.aria-label]="'common.next' | translate">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="arrow-next"><path d="M9 18l6-6-6-6"/></svg>
           </button>
         </div>
       </div>
@@ -27,38 +30,37 @@ import { ToastrService } from 'ngx-toastr';
         <div class="slider-track" #track
              (mousedown)="onDragStart($event)"
              (mousemove)="onDragMove($event)"
-             (mouseup)="onDragEnd($event)"
-             (mouseleave)="onDragEnd($event)"
+             (mouseup)="onDragEnd()"
+             (mouseleave)="onPointerLeave()"
              (touchstart)="onTouchStart($event)"
              (touchmove)="onTouchMove($event)"
-             (touchend)="onTouchEnd($event)"
-             (mouseenter)="onMouseEnter()"
-             (mouseleave)="onMouseLeave()">
+             (touchend)="onTouchEnd()"
+             (mouseenter)="onHover(true)">
           <div class="slider-card" *ngFor="let product of products">
             <a [routerLink]="['/products', product.id]" class="product-link">
               <div class="product-image-wrap">
                 <img [src]="product.primaryImageUrl || 'https://via.placeholder.com/300x220?text=No+Image'"
-                     class="product-image" [alt]="product.nameEN" loading="lazy">
+                     class="product-image" [alt]="localizedName(product)" loading="lazy">
                 <span class="badge-discount" *ngIf="product.discountPrice && product.discountPrice < product.price">
                   -{{ getDiscountPercent(product) }}%
                 </span>
               </div>
               <div class="product-info">
-                <h6 class="product-name">{{ product.nameEN }}</h6>
+                <h6 class="product-name">{{ localizedName(product) }}</h6>
                 <div class="product-rating" *ngIf="product.averageRating">
                   <span class="stars">{{ getStars(product.averageRating) }}</span>
                   <span class="review-count">({{ product.reviewCount }})</span>
                 </div>
                 <div class="product-price">
-                  <span class="current-price">{{ (product.discountPrice || product.price) | currency }}</span>
-                  <span class="original-price" *ngIf="product.discountPrice && product.discountPrice < product.price">{{ product.price | currency }}</span>
+                  <span class="current-price">{{ (product.discountPrice || product.price) | price }}</span>
+                  <span class="original-price" *ngIf="product.discountPrice && product.discountPrice < product.price">{{ product.price | price }}</span>
                 </div>
               </div>
             </a>
             <button class="add-to-cart-btn"
                     [disabled]="product.stockQuantity === 0 || addingIds.has(product.id)"
                     (click)="addToCart(product, $event)">
-              {{ product.stockQuantity === 0 ? 'Out of Stock' : (addingIds.has(product.id) ? 'Adding...' : 'Add to Cart') }}
+              {{ product.stockQuantity === 0 ? ('products.outOfStock' | translate) : (addingIds.has(product.id) ? ('productDetail.adding' | translate) : ('productDetail.addToCart' | translate)) }}
             </button>
           </div>
         </div>
@@ -124,14 +126,22 @@ import { ToastrService } from 'ngx-toastr';
     .add-to-cart-btn:hover:not(:disabled) { background: #0b5ed7; }
     .add-to-cart-btn:disabled { background: #6c757d; cursor: default; }
 
+    /* RTL: mirror the horizontal scroll direction and the prev/next arrows */
+    :host-context(html[dir="rtl"]) .slider-track { direction: rtl; }
+    :host-context(html[dir="rtl"]) .arrow-prev { transform: scaleX(-1); }
+    :host-context(html[dir="rtl"]) .arrow-next { transform: scaleX(-1); }
+
     @media (max-width: 1200px) { .slider-card { flex: 0 0 calc(33.333% - 0.67rem); } }
     @media (max-width: 768px) { .slider-card { flex: 0 0 calc(50% - 0.5rem); } }
     @media (max-width: 480px) { .slider-card { flex: 0 0 calc(80% - 0.4rem); } }
   `]
 })
 export class ProductSliderComponent implements OnInit, AfterViewInit, OnDestroy {
+  private translate = inject(TranslateService);
+  private languageService = inject(LanguageService);
   @Input() products: Product[] = [];
-  @Input() title: string = '';
+  @Input() titleKey = '';
+  @Input() title = '';
   @Input() autoplayMs: number = 0;
 
   @ViewChild('track') trackRef!: ElementRef<HTMLDivElement>;
@@ -171,6 +181,13 @@ export class ProductSliderComponent implements OnInit, AfterViewInit, OnDestroy 
     if (this.resizeObserver) this.resizeObserver.disconnect();
   }
 
+  localizedName(product: Product): string {
+    const isArabic = this.languageService.currentLanguage() === 'ar';
+    return isArabic
+      ? (product.nameAR || product.nameEN || '')
+      : (product.nameEN || product.nameAR || '');
+  }
+
   getDiscountPercent(product: Product): number {
     if (!product.discountPrice || !product.price) return 0;
     return Math.round(((product.price - product.discountPrice) / product.price) * 100);
@@ -195,15 +212,16 @@ export class ProductSliderComponent implements OnInit, AfterViewInit, OnDestroy 
       return;
     }
     if (this.addingIds.has(product.id)) return;
+    const t = this.translate;
     this.addingIds.add(product.id);
     this.cartService.addToCart(product.id, 1).subscribe({
       next: () => {
         this.addingIds.delete(product.id);
-        this.toastr.success('Added to cart', 'Success');
+        this.toastr.success(t.instant('toast.addedToCart'), t.instant('common.success'));
       },
       error: (err) => {
         this.addingIds.delete(product.id);
-        this.toastr.error(err?.error?.message || err?.message || 'Failed to add to cart', 'Error');
+        this.toastr.error(err?.error?.message || err?.message || t.instant('toast.error'), t.instant('common.error'));
       }
     });
   }
@@ -248,8 +266,17 @@ export class ProductSliderComponent implements OnInit, AfterViewInit, OnDestroy 
     }
   }
 
-  onMouseEnter() { if (this.autoplayMs > 0) this.stopAutoplay(); }
-  onMouseLeave() { if (this.autoplayMs > 0) this.startAutoplay(); }
+  onHover(entering: boolean) {
+    if (this.autoplayMs <= 0) return;
+    if (entering) this.stopAutoplay();
+    else this.startAutoplay();
+  }
+
+  /** Leaving the track ends any drag and resumes autoplay. */
+  onPointerLeave() {
+    this.endDrag();
+    this.onHover(false);
+  }
 
   onDragStart(e: MouseEvent) {
     if (!this.trackRef) return;
@@ -267,10 +294,14 @@ export class ProductSliderComponent implements OnInit, AfterViewInit, OnDestroy 
     this.trackRef.nativeElement.scrollLeft = this.scrollLeft - walk;
   }
 
-  onDragEnd(e: MouseEvent) {
-    if (!this.isDragging || !this.trackRef) return;
+  onDragEnd() {
+    this.endDrag();
+  }
+
+  private endDrag() {
+    if (!this.isDragging) return;
     this.isDragging = false;
-    this.trackRef.nativeElement.classList.remove('dragging');
+    this.trackRef?.nativeElement.classList.remove('dragging');
     this.updateScrollState();
   }
 
@@ -288,8 +319,7 @@ export class ProductSliderComponent implements OnInit, AfterViewInit, OnDestroy 
     this.trackRef.nativeElement.scrollLeft = this.scrollLeft - walk;
   }
 
-  onTouchEnd(e: TouchEvent) {
-    this.isDragging = false;
-    this.updateScrollState();
+  onTouchEnd() {
+    this.endDrag();
   }
 }

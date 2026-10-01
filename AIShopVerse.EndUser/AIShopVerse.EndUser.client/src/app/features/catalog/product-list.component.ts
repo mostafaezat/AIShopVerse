@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
@@ -11,85 +11,88 @@ import { ProductFilterService, ProductFilterState } from '../../core/services/pr
 import { Product, PagedResult } from '../../core/models';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { AuthService } from '../../core/services/auth.service';
+import { LanguageService } from '../../core/services/language.service';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { PricePipe } from '../../shared/pipes/localized-format.pipes';
 
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, TranslatePipe, PricePipe],
   template: `
     <div class="container py-4">
-      <h2 class="mb-4">Products <span class="text-muted fs-6" *ngIf="result">{{ result.totalItems }} item(s)</span></h2>
+      <h2 class="mb-4">{{ 'products.title' | translate }} <span class="text-muted fs-6" *ngIf="result">{{ result.totalItems }} {{ 'products.itemCount' | translate }}</span></h2>
 
       <div class="d-flex flex-wrap gap-2 mb-4">
         <div class="flex-grow-1" style="max-width:420px;">
-          <input type="text" class="form-control" placeholder="Search products..."
+          <input type="text" class="form-control" [placeholder]="'products.searchPlaceholder' | translate"
                  [(ngModel)]="searchTerm" (ngModelChange)="onSearch()">
         </div>
         <select class="form-select" style="width:220px;" [(ngModel)]="sortBy" (ngModelChange)="onFilterChange()">
-          <option value="newest">Newest</option>
-          <option value="price_asc">Price: Low to High</option>
-          <option value="price_desc">Price: High to Low</option>
-          <option value="rating">Top Rated</option>
+          <option value="newest">{{ 'products.sortNewest' | translate }}</option>
+          <option value="price_asc">{{ 'products.sortPriceAsc' | translate }}</option>
+          <option value="price_desc">{{ 'products.sortPriceDesc' | translate }}</option>
+          <option value="rating">{{ 'products.sortRating' | translate }}</option>
         </select>
-        <button class="btn btn-outline-secondary" (click)="clearFilters()">Clear Filters</button>
+        <button class="btn btn-outline-secondary" (click)="clearFilters()">{{ 'products.clearFilters' | translate }}</button>
       </div>
 
       <div class="row">
         <aside class="col-lg-3 mb-4">
           <div class="card">
-            <div class="card-header fw-bold">Filters</div>
+            <div class="card-header fw-bold">{{ 'products.filters' | translate }}</div>
             <div class="card-body">
 
               <div class="filter-section">
-                <label class="filter-label">Category</label>
+                <label class="filter-label">{{ 'products.category' | translate }}</label>
                 <div class="filter-list">
                   <a class="filter-item" [class.active]="categoryId === ''" (click)="selectCategory('')">
-                    <span>All Categories</span>
+                    <span>{{ 'products.allCategories' | translate }}</span>
                     <span class="badge bg-secondary">{{ allCategoryCount }}</span>
                   </a>
                   <a class="filter-item" *ngFor="let c of filteredCategories"
                      [class.active]="categoryId === c.id"
                      (click)="selectCategory(c.id)">
-                    <span>{{ c.nameEN }}</span>
+                    <span>{{ getCategoryName(c) }}</span>
                     <span class="badge bg-secondary">{{ c.productCount }}</span>
                   </a>
                 </div>
               </div>
 
               <div class="filter-section">
-                <label class="filter-label">Brand</label>
+                <label class="filter-label">{{ 'products.brand' | translate }}</label>
                 <div class="filter-list">
                   <a class="filter-item" [class.active]="brandId === ''" (click)="selectBrand('')">
-                    <span>All Brands</span>
+                    <span>{{ 'products.allBrands' | translate }}</span>
                     <span class="badge bg-secondary">{{ allBrandCount }}</span>
                   </a>
                   <a class="filter-item" *ngFor="let b of filteredBrands"
                      [class.active]="brandId === b.id"
                      (click)="selectBrand(b.id)">
-                    <span>{{ b.nameEN }}</span>
+                    <span>{{ getBrandName(b) }}</span>
                     <span class="badge bg-secondary">{{ b.productCount }}</span>
                   </a>
                 </div>
               </div>
 
               <div class="filter-section">
-                <label class="filter-label">Price</label>
+                <label class="filter-label">{{ 'products.price' | translate }}</label>
                 <div class="d-flex gap-2 align-items-center">
-                  <input type="number" class="form-control form-control-sm" placeholder="Min" [(ngModel)]="minPrice" (ngModelChange)="onFilterChange()">
+                  <input type="number" class="form-control form-control-sm" [placeholder]="'products.minPrice' | translate" [(ngModel)]="minPrice" (ngModelChange)="onFilterChange()">
                   <span>—</span>
-                  <input type="number" class="form-control form-control-sm" placeholder="Max" [(ngModel)]="maxPrice" (ngModelChange)="onFilterChange()">
+                  <input type="number" class="form-control form-control-sm" [placeholder]="'products.maxPrice' | translate" [(ngModel)]="maxPrice" (ngModelChange)="onFilterChange()">
                 </div>
               </div>
 
               <div class="filter-section">
-                <label class="filter-label">Minimum Rating</label>
+                <label class="filter-label">{{ 'products.minRating' | translate }}</label>
                 <div class="d-flex gap-1 flex-wrap" role="group">
                   <button *ngFor="let r of [0,1,2,3,4,5]" type="button"
                           class="btn btn-sm me-1"
                           [class.btn-warning]="minRating === r"
                           [class.btn-outline-secondary]="minRating !== r"
                           (click)="setRating(r)">
-                    <ng-container *ngIf="r > 0">{{ r }}★</ng-container><ng-container *ngIf="r === 0">Any</ng-container>
+                    <ng-container *ngIf="r > 0">{{ r }}★</ng-container><ng-container *ngIf="r === 0">{{ 'common.all' | translate }}</ng-container>
                   </button>
                 </div>
               </div>
@@ -97,24 +100,24 @@ import { AuthService } from '../../core/services/auth.service';
               <div class="form-check mt-2">
                 <input class="form-check-input" type="checkbox" id="inStock"
                        [(ngModel)]="inStockOnly" (ngModelChange)="onFilterChange()">
-                <label class="form-check-label" for="inStock">In stock only</label>
+                <label class="form-check-label" for="inStock">{{ 'products.inStockOnly' | translate }}</label>
               </div>
             </div>
           </div>
         </aside>
 
         <section class="col-lg-9">
-          <div *ngIf="loading" class="text-center py-5 text-muted">Loading products...</div>
+          <div *ngIf="loading" class="text-center py-5 text-muted">{{ 'products.loading' | translate }}</div>
 
           <div *ngIf="!loading && loadError" class="text-center py-5">
             <div class="alert alert-warning mx-auto" style="max-width:480px;">
-              Unable to load products. Please try again.
-              <div class="mt-2"><button class="btn btn-outline-secondary btn-sm" (click)="retry()">Retry</button></div>
+              {{ 'products.loadError' | translate }}
+              <div class="mt-2"><button class="btn btn-outline-secondary btn-sm" (click)="retry()">{{ 'common.retry' | translate }}</button></div>
             </div>
           </div>
 
           <div *ngIf="!loading && !loadError && products.length === 0" class="text-center py-5 text-muted">
-            No products match your filters.
+            {{ 'products.noProducts' | translate }}
           </div>
 
           <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3" *ngIf="!loading && !loadError">
@@ -124,23 +127,23 @@ import { AuthService } from '../../core/services/auth.service';
                   <button class="wishlist-heart"
                           [class.active]="wishlistSet.has(product.id)"
                           (click)="toggleWishlist(product.id, $event)"
-                          title="Toggle wishlist">♥</button>
+                          [attr.aria-label]="'products.toggleWishlist' | translate">♥</button>
                   <img [src]="product.primaryImageUrl || 'https://via.placeholder.com/300x220?text=No+Image'"
-                       class="card-img-top" style="height:180px;object-fit:contain;" [alt]="product.nameEN">
+                       class="card-img-top" style="height:180px;object-fit:contain;" [alt]="getProductName(product)">
                   <div class="card-body">
-                    <h6 class="card-title mb-1">{{ product.nameEN }}</h6>
+                    <h6 class="card-title mb-1">{{ getProductName(product) }}</h6>
                     <small class="text-muted" *ngIf="product.brandName">{{ product.brandName }}</small>
                     <div class="text-warning" *ngIf="product.averageRating">
                       {{ product.averageRating | number:'1.1-1' }} ★
                       <span class="text-muted fs-8">({{ product.reviewCount }})</span>
                     </div>
                     <div class="mt-2">
-                      <span class="fw-bold text-primary" *ngIf="product.discountPrice">{{ product.discountPrice | currency }}</span>
-                      <span class="fw-bold" *ngIf="!product.discountPrice">{{ product.price | currency }}</span>
-                      <span class="text-muted text-decoration-line-through ms-2" *ngIf="product.discountPrice">{{ product.price | currency }}</span>
+                      <span class="fw-bold text-primary" *ngIf="product.discountPrice">{{ product.discountPrice | price }}</span>
+                      <span class="fw-bold" *ngIf="!product.discountPrice">{{ product.price | price }}</span>
+                      <span class="text-muted text-decoration-line-through ms-2" *ngIf="product.discountPrice">{{ product.price | price }}</span>
                     </div>
                     <span class="badge" [class.bg-success]="product.stockQuantity > 0" [class.bg-danger]="product.stockQuantity === 0">
-                      {{ product.stockQuantity > 0 ? 'In Stock' : 'Out of Stock' }}
+                      {{ product.stockQuantity > 0 ? ('products.inStock' | translate) : ('products.outOfStock' | translate) }}
                     </span>
                   </div>
                 </div>
@@ -151,13 +154,13 @@ import { AuthService } from '../../core/services/auth.service';
           <nav *ngIf="result && result.totalPages > 1" class="mt-4">
             <ul class="pagination justify-content-center">
               <li class="page-item" [class.disabled]="!result.hasPrevious">
-                <button class="page-link" (click)="changePage(result.page - 1)">Previous</button>
+                <button class="page-link" (click)="changePage(result.page - 1)">{{ 'products.previous' | translate }}</button>
               </li>
               <li class="page-item" *ngFor="let p of pages">
                 <button class="page-link" [class.active]="p === result.page" (click)="changePage(p)">{{ p }}</button>
               </li>
               <li class="page-item" [class.disabled]="!result.hasNext">
-                <button class="page-link" (click)="changePage(result.page + 1)">Next</button>
+                <button class="page-link" (click)="changePage(result.page + 1)">{{ 'products.next' | translate }}</button>
               </li>
             </ul>
           </nav>
@@ -190,6 +193,8 @@ import { AuthService } from '../../core/services/auth.service';
   `]
 })
 export class ProductListComponent implements OnInit, OnDestroy {
+  languageService = inject(LanguageService);
+  private translate = inject(TranslateService);
   products: Product[] = [];
   result?: PagedResult<Product>;
   loading = false;
@@ -307,7 +312,7 @@ export class ProductListComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.wishlistBusy.delete(productId);
-        this.toastr.error(err?.error?.message || err?.message || 'Failed to update wishlist', 'Error');
+        this.toastr.error(err?.error?.message || err?.message || this.t('toast.error'), this.t('common.error'));
       }
     });
   }
@@ -394,5 +399,25 @@ export class ProductListComponent implements OnInit, OnDestroy {
     const out: number[] = [];
     for (let i = start; i <= end; i++) out.push(i);
     return out;
+  }
+
+  getProductName(product: Product): string {
+    return this.languageService.currentLanguage() === 'ar'
+      ? (product.nameAR || product.nameEN || '')
+      : (product.nameEN || product.nameAR || '');
+  }
+
+  getCategoryName(cat: CategoryWithCount): string {
+    return this.languageService.currentLanguage() === 'ar'
+      ? (cat.nameAR || cat.nameEN || '')
+      : (cat.nameEN || cat.nameAR || '');
+  }
+
+  getBrandName(brand: BrandWithCount): string {
+    return this.languageService.currentLanguage() === 'ar' ? (brand.nameAR || brand.nameEN) : brand.nameEN;
+  }
+
+  t(key: string): string {
+    return this.translate.instant(key);
   }
 }

@@ -6,55 +6,57 @@ import { ProductService } from '../../core/services/product.service';
 import { RecommendationService, RecommendedForYou } from '../../core/services/recommendation.service';
 import { Product } from '../../core/models';
 import { ProductSliderComponent } from '../../shared/product-slider.component';
+import { TranslatePipe } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, RouterModule, ProductSliderComponent],
+  imports: [CommonModule, RouterModule, ProductSliderComponent, TranslatePipe],
   template: `
     <div class="hero-section">
       <div class="hero-content">
-        <h1 class="hero-title">Welcome to AIShopVerse</h1>
-        <p class="hero-subtitle">Discover amazing products tailored to you.</p>
-        <a routerLink="/products" class="hero-btn">Browse Products</a>
+        <h1 class="hero-title">{{ 'home.welcomeTitle' | translate }}</h1>
+        <p class="hero-subtitle">{{ 'home.welcomeSubtitle' | translate }}</p>
+        <a routerLink="/products" class="hero-btn">{{ 'home.browseProducts' | translate }}</a>
       </div>
     </div>
 
     <div class="container py-4">
       <div *ngIf="loadError" class="alert alert-warning text-center">
-        We could not load the latest products. <button class="btn btn-sm btn-outline-secondary ms-2" (click)="loadHome()">Retry</button>
+        {{ 'home.loadError' | translate }}
+        <button class="btn btn-sm btn-outline-secondary ms-2" (click)="loadHome()">{{ 'common.retry' | translate }}</button>
       </div>
 
       <app-product-slider
         *ngIf="bestSellers.length"
         [products]="bestSellers"
-        title="Best Sellers"
+        [title]="'home.bestSellers' | translate"
         [autoplayMs]="5000">
       </app-product-slider>
 
       <app-product-slider
         *ngIf="newArrivals.length"
         [products]="newArrivals"
-        title="New Arrivals"
+        [title]="'home.newArrivals' | translate"
         [autoplayMs]="5000">
       </app-product-slider>
 
       <app-product-slider
         *ngIf="promotions.length"
         [products]="promotions"
-        title="Promotions"
+        [title]="'home.promotions' | translate"
         [autoplayMs]="5000">
       </app-product-slider>
 
       <app-product-slider
         *ngIf="auth.isLoggedIn() && recommended && recommended.products.length"
         [products]="recommended.products"
-        [title]="recommended.mode === 'Popular' ? 'Popular Right Now' : 'Recommended for You'"
+        [title]="recommended.mode === 'Popular' ? ('home.popularNow' | translate) : ('home.recommendedForYou' | translate)"
         [autoplayMs]="5000">
       </app-product-slider>
 
       <p *ngIf="!auth.isLoggedIn()" class="text-center text-muted mt-4">
-        <a routerLink="/login">Log in</a> to get personalized recommendations.
+        <a routerLink="/login">{{ 'home.loginForRecommendations' | translate }}</a>
       </p>
     </div>
   `,

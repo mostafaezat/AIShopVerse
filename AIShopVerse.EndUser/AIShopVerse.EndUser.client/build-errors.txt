@@ -1,0 +1,43 @@
+﻿
+> aishop-verse.end-user.client@0.0.0 build
+> ng build --configuration development
+
+[33m>[39m Building...
+[32mΓêÜ[39m Building...
+[1mInitial chunk files[22m[2m | [22m[1mNames[22m                    [2m | [22m [1mRaw size[22m
+[32mchunk-4RLYN5RC.js[39m  [2m | [22m[2m-[22m                        [2m | [22m[36m983.47 kB[39m[2m | [22m
+[32mchunk-MICXYCQH.js[39m  [2m | [22m[2m-[22m                        [2m | [22m[36m376.31 kB[39m[2m | [22m
+[32mstyles.css[39m         [2m | [22m[2mstyles[22m                   [2m | [22m[36m304.04 kB[39m[2m | [22m
+[32mchunk-Y2JSGMUT.js[39m  [2m | [22m[2m-[22m                        [2m | [22m[36m112.63 kB[39m[2m | [22m
+[32mpolyfills.js[39m       [2m | [22m[2mpolyfills[22m                [2m | [22m [36m90.20 kB[39m[2m | [22m
+[32mmain.js[39m            [2m | [22m[2mmain[22m                     [2m | [22m [36m54.47 kB[39m[2m | [22m
+[32mchunk-W2XCLMZR.js[39m  [2m | [22m[2m-[22m                        [2m | [22m [36m47.44 kB[39m[2m | [22m
+[32mchunk-KDSYRAV5.js[39m  [2m | [22m[2m-[22m                        [2m | [22m [36m12.84 kB[39m[2m | [22m
+[32mchunk-SQVUTTDY.js[39m  [2m | [22m[2m-[22m                        [2m | [22m  [36m6.08 kB[39m[2m | [22m
+[32mchunk-OKZXUQLS.js[39m  [2m | [22m[2m-[22m                        [2m | [22m  [36m5.48 kB[39m[2m | [22m
+[32mchunk-ZZ4NK2B3.js[39m  [2m | [22m[2m-[22m                        [2m | [22m  [36m2.05 kB[39m[2m | [22m
+
+[1m [22m                  [2m | [22m[1mInitial total[22m            [2m | [22m  [1m2.00 MB[22m
+
+[1mLazy chunk files[22m   [2m | [22m[1mNames[22m                    [2m | [22m [1mRaw size[22m
+[32mchunk-RVRFGOA3.js[39m  [2m | [22m[2m-[22m                        [2m | [22m[36m200.51 kB[39m[2m | [22m
+[32mchunk-5UK4NDH7.js[39m  [2m | [22m[2mbrowser[22m                  [2m | [22m[36m146.38 kB[39m[2m | [22m
+[32mchunk-RCZ6QSBF.js[39m  [2m | [22m[2mproduct-detail-component[22m [2m | [22m [36m45.26 kB[39m[2m | [22m
+[32mchunk-Y2NAZIAX.js[39m  [2m | [22m[2mproduct-list-component[22m   [2m | [22m [36m39.31 kB[39m[2m | [22m
+[32mchunk-TBNSVHKG.js[39m  [2m | [22m[2mhome-component[22m           [2m | [22m [36m31.65 kB[39m[2m | [22m
+[32mchunk-7VVPY24G.js[39m  [2m | [22m[2mregister-component[22m       [2m | [22m [36m23.50 kB[39m[2m | [22m
+[32mchunk-WI6MLX4P.js[39m  [2m | [22m[2mcheckout-component[22m       [2m | [22m [36m22.11 kB[39m[2m | [22m
+[32mchunk-JM5A2HGH.js[39m  [2m | [22m[2mcart-component[22m           [2m | [22m [36m21.72 kB[39m[2m | [22m
+[32mchunk-GCSGX7J5.js[39m  [2m | [22m[2mlogin-component[22m          [2m | [22m [36m20.24 kB[39m[2m | [22m
+[32mchunk-HW56Q3MH.js[39m  [2m | [22m[2mreset-password-component[22m [2m | [22m [36m19.77 kB[39m[2m | [22m
+[32mchunk-SFTHHKVL.js[39m  [2m | [22m[2m-[22m                        [2m | [22m [36m18.98 kB[39m[2m | [22m
+[32mchunk-TCKV5OZG.js[39m  [2m | [22m[2mforgot-password-component[22m[2m | [22m [36m16.13 kB[39m[2m | [22m
+[32mchunk-Y5QOUR5J.js[39m  [2m | [22m[2morder-detail-component[22m   [2m | [22m [36m11.81 kB[39m[2m | [22m
+[32mchunk-FXE5FNIX.js[39m  [2m | [22m[2mwishlist-component[22m       [2m | [22m  [36m9.40 kB[39m[2m | [22m
+[32mchunk-XNSLTNIS.js[39m  [2m | [22m[2morder-history-component[22m  [2m | [22m  [36m6.74 kB[39m[2m | [22m
+[2m...and 6 more lazy chunks files. Use "--verbose" to show all the files.[22m
+
+Application bundle generation complete. [13.286 seconds]
+
+Output location: D:\test API\NEWApp\AIShopVerse\AIShopVerse.EndUser\AIShopVerse.EndUser.client\dist\aishop-verse.end-user.client
+

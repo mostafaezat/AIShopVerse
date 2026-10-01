@@ -1,27 +1,31 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { Subscription, timer, Subject, of } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from './core/services/auth.service';
 import { CategoryService, CategoryTreeDto } from './core/services/category.service';
 import { NotificationService, NotificationDto } from './core/services/notification.service';
 import { SignalRService } from './core/services/signalr.service';
 import { SearchService, SearchSuggestion } from './core/services/search.service';
 import { ProductFilterService } from './core/services/product-filter.service';
+import { LanguageService } from './core/services/language.service';
+import { LanguageSwitcherComponent } from './shared/components/language-switcher/language-switcher.component';
+import { PricePipe, LocalizedDatePipe } from './shared/pipes/localized-format.pipes';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TranslatePipe, LanguageSwitcherComponent, PricePipe, LocalizedDatePipe],
   template: `
     <header>
-      <nav>
-        <a routerLink="/">AIShopVerse</a>
-        <a routerLink="/products">Products</a>
+      <nav [dir]="languageService.isRTL() ? 'rtl' : 'ltr'">
+        <a routerLink="/">{{ 'navigation.brand' | translate }}</a>
+        <a routerLink="/products">{{ 'navigation.products' | translate }}</a>
 
         <div class="search-wrap">
-          <input type="text" class="search-input" placeholder="Search..."
+          <input type="text" class="search-input" [placeholder]="'products.searchPlaceholder' | translate"
                  (input)="onSearchInput($event)" (keydown.enter)="submitSearch()"
                  (focus)="onFocus()" (blur)="closeSuggestions()">
           <div class="search-dropdown" *ngIf="suggestions.length && showSuggestions">
@@ -30,55 +34,57 @@ import { ProductFilterService } from './core/services/product-filter.service';
               <img [src]="s.imageUrl || 'https://via.placeholder.com/40x40?text=No+Image'"
                    class="search-thumb" alt="">
               <div class="search-item-body">
-                <div class="search-name">{{ s.nameEN }}</div>
-                <div class="search-price">{{ (s.discountPrice ?? s.price) | currency }}</div>
+                <div class="search-name">{{ getProductName(s) }}</div>
+                <div class="search-price">{{ (s.discountPrice ?? s.price) | price }}</div>
               </div>
             </a>
-            <a class="search-more" (mousedown)="submitSearch()">See all results for "{{ searchTerm }}"</a>
+            <a class="search-more" (mousedown)="submitSearch()">{{ 'navigation.seeAllResults' | translate }} "{{ searchTerm }}"</a>
           </div>
         </div>
 
         <div class="dropdown" *ngIf="categories.length">
-          <button class="dropbtn">Categories ▾</button>
+          <button class="dropbtn">{{ 'navigation.categories' | translate }} ▾</button>
           <div class="dropdown-content">
             <a *ngFor="let c of flatten(categories)" [routerLink]="['/products']"
-               (click)="selectCategory(c)">{{ c.nameEN }}</a>
+               (click)="selectCategory(c)">{{ getCategoryName(c) }}</a>
           </div>
         </div>
 
-        <a routerLink="/cart" *ngIf="auth.isLoggedIn()">Cart</a>
-        <a routerLink="/orders" *ngIf="auth.isLoggedIn()">Orders</a>
-        <a routerLink="/wishlist" *ngIf="auth.isLoggedIn()">Wishlist</a>
+        <a routerLink="/cart" *ngIf="auth.isLoggedIn()">{{ 'navigation.cart' | translate }}</a>
+        <a routerLink="/orders" *ngIf="auth.isLoggedIn()">{{ 'navigation.orders' | translate }}</a>
+        <a routerLink="/wishlist" *ngIf="auth.isLoggedIn()">{{ 'navigation.wishlist' | translate }}</a>
 
         <div class="notif-wrap" *ngIf="auth.isLoggedIn()">
-          <button class="notif-bell" (click)="toggleNotifications()">Notifications
+          <button class="notif-bell" (click)="toggleNotifications()">{{ 'navigation.notifications' | translate }}
             <span class="notif-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
           </button>
           <div class="notif-panel" *ngIf="showNotifications" (click)="$event.stopPropagation()">
             <div class="notif-header">
-              <span>Notifications</span>
-              <button class="notif-markall" (click)="markAllRead()">Mark all read</button>
+              <span>{{ 'navigation.notifications' | translate }}</span>
+              <button class="notif-markall" (click)="markAllRead()">{{ 'navigation.markAllRead' | translate }}</button>
             </div>
-            <div class="notif-empty" *ngIf="!notifications.length">No notifications</div>
+            <div class="notif-empty" *ngIf="!notifications.length">{{ 'navigation.noNotifications' | translate }}</div>
             <a class="notif-item" [class.unread]="!n.isRead"
                *ngFor="let n of notifications" (click)="openNotification(n)">
               <div class="notif-title">{{ n.title }}</div>
               <div class="notif-msg" *ngIf="n.message">{{ n.message }}</div>
-              <div class="notif-time">{{ n.createdAt | date: 'short' }}</div>
+              <div class="notif-time">{{ n.createdAt | localizedDate: 'short' }}</div>
             </a>
           </div>
         </div>
 
-        <a routerLink="/login" *ngIf="!auth.isLoggedIn()">Login</a>
-        <a routerLink="/register" *ngIf="!auth.isLoggedIn()">Register</a>
-        <button *ngIf="auth.isLoggedIn()" (click)="auth.logout()">Logout</button>
+        <a routerLink="/login" *ngIf="!auth.isLoggedIn()">{{ 'navigation.login' | translate }}</a>
+        <a routerLink="/register" *ngIf="!auth.isLoggedIn()">{{ 'navigation.register' | translate }}</a>
+        <button *ngIf="auth.isLoggedIn()" (click)="auth.logout()">{{ 'navigation.logout' | translate }}</button>
+
+        <app-language-switcher></app-language-switcher>
       </nav>
     </header>
     <main><router-outlet></router-outlet></main>
     <footer><p>&copy; AIShopVerse</p></footer>
   `,
   styles: [`
-    nav { display: flex; gap: 1rem; padding: 1rem; background: #333; color: white; align-items: center; }
+    nav { display: flex; gap: 1rem; padding: 1rem; background: #333; color: white; align-items: center; flex-wrap: wrap; }
     nav a { color: white; text-decoration: none; }
     main { min-height: 80vh; padding: 2rem; }
     footer { text-align: center; padding: 1rem; background: #f5f5f5; }
@@ -95,6 +101,7 @@ import { ProductFilterService } from './core/services/product-filter.service';
       border-radius: 50%; padding: 0 5px; font-size: 0.7rem; }
     .notif-panel { position: absolute; right: 0; top: 28px; background: #fff; color: #333; min-width: 320px;
       max-height: 60vh; overflow: auto; box-shadow: 0 8px 16px rgba(0,0,0,.2); z-index: 2000; }
+    :host-context(html[dir="rtl"]) .notif-panel { right: auto; left: 0; }
     .notif-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px;
       border-bottom: 1px solid #ddd; }
     .notif-markall { background: none; border: none; color: #0d6efd; cursor: pointer; font-size: 0.8rem; }
@@ -105,10 +112,11 @@ import { ProductFilterService } from './core/services/product-filter.service';
     .notif-title { font-weight: 600; }
     .notif-msg { font-size: 0.85rem; }
     .notif-time { font-size: 0.75rem; color: #888; }
-    .search-wrap { position: relative; flex: 1; max-width: 420px; }
+    .search-wrap { position: relative; flex: 1; max-width: 420px; min-width: 200px; }
     .search-input { width: 100%; padding: 8px 12px; border-radius: 20px; border: none; font-size: 0.95rem; }
     .search-dropdown { position: absolute; top: 40px; left: 0; right: 0; background: #fff; color: #333;
       box-shadow: 0 8px 16px rgba(0,0,0,.2); z-index: 3000; border-radius: 8px; overflow: hidden; }
+    :host-context(html[dir="rtl"]) .search-dropdown { left: auto; right: 0; }
     .search-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px;
       color: #333; text-decoration: none; cursor: pointer; }
     .search-item:hover { background: #f5f5f5; }
@@ -119,9 +127,12 @@ import { ProductFilterService } from './core/services/product-filter.service';
     .search-more { display: block; padding: 8px 12px; color: #0d6efd; text-decoration: none;
       cursor: pointer; border-top: 1px solid #eee; font-size: 0.85rem; }
     .search-more:hover { background: #f5f5f5; }
+    app-language-switcher { margin-left: auto; }
+    :host-context(html[dir="rtl"]) app-language-switcher { margin-left: 0; margin-right: auto; }
   `]
 })
 export class AppComponent implements OnInit, OnDestroy {
+  languageService = inject(LanguageService);
   categories: CategoryTreeDto[] = [];
   notifications: NotificationDto[] = [];
   unreadCount = 0;
@@ -300,5 +311,15 @@ export class AppComponent implements OnInit, OnDestroy {
 
   closeSuggestions() {
     setTimeout(() => this.showSuggestions = false, 150);
+  }
+
+  getProductName(s: SearchSuggestion): string {
+    const isArabic = this.languageService.currentLanguage() === 'ar';
+    return isArabic ? (s.nameAR || s.nameEN || '') : (s.nameEN || s.nameAR || '');
+  }
+
+  getCategoryName(c: CategoryTreeDto): string {
+    const isArabic = this.languageService.currentLanguage() === 'ar';
+    return isArabic ? (c.nameAR || c.nameEN || '') : (c.nameEN || c.nameAR || '');
   }
 }

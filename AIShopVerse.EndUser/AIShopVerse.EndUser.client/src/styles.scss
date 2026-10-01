@@ -1,1 +1,361 @@
-/* You can add global styles to this file, and also import other style files */
+/* ==========================================================================
+   Global styles
+   --------------------------------------------------------------------------
+   Bootstrap 5.3 is compiled with physical CSS properties (margin-left,
+   float: left, ...), so it does not flip itself when <html dir> changes.
+   The layer below maps Bootstrap's direction-sensitive utilities and a few
+   component internals onto their RTL equivalents.
+
+   Rules of thumb used here:
+   - Prefer logical properties (margin-inline-start, inset-inline-end). They are
+     direction-aware on their own and need no [dir="rtl"] scoping.
+   - Only use physical properties inside html[dir="rtl"] when undoing a
+     physical property Bootstrap already set.
+   - Keep specificity at (0,1,1) via html[dir="rtl"] .x so component styles can
+     still win, matching how Bootstrap's own utilities behave.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Bootstrap spacing scale (must stay in sync with bootstrap/scss/_spacing.scss)
+   -------------------------------------------------------------------------- */
+$spacers: (
+  0: 0,
+  1: 0.25rem,
+  2: 0.5rem,
+  3: 1rem,
+  4: 1.5rem,
+  5: 3rem
+);
+
+/* Breakpoint infixes for the responsive utility variants.
+   Note the leading *and* trailing hyphen, matching Bootstrap: .ms-sm-0. */
+$breakpoints: (
+  ""   : null,
+  "-sm-": "576px",
+  "-md-": "768px",
+  "-lg-": "992px",
+  "-xl-": "1200px",
+  "-xxl-": "1400px"
+);
+
+/* The <html dir> attribute already drives the computed direction; this only
+   makes the mapping explicit and gives us a base text alignment. */
+html[dir="rtl"] {
+  direction: rtl;
+}
+
+html[dir="ltr"] {
+  direction: ltr;
+}
+
+body {
+  text-align: start;
+}
+
+/* ==========================================================================
+   Forced-direction helpers
+   Numbers, emails, URLs and card details must stay LTR inside Arabic pages.
+   ========================================================================== */
+.force-ltr {
+  direction: ltr;
+  text-align: left;
+  unicode-bidi: embed;
+}
+
+.force-rtl {
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: embed;
+}
+
+/* Phone numbers, card numbers, order numbers and reference codes. */
+.ltr-value {
+  direction: ltr;
+  unicode-bidi: embed;
+  display: inline-block;
+}
+
+/* ==========================================================================
+   RTL flips for Bootstrap utilities
+   ========================================================================== */
+
+/* --- Spacing: margin / padding ------------------------------------------
+   Bootstrap writes `margin-left` for .ms-* and `padding-left` for .ps-*.
+   In RTL those have to become their right-hand counterparts *and* the
+   physical left value has to be cleared, otherwise both sides end up set. */
+@each $infix, $bp in $breakpoints {
+  @each $key, $val in $spacers {
+    $suffix: "#{$infix}#{$key}";
+
+    @if $bp == null {
+      html[dir="rtl"] {
+        .ms#{$suffix} { margin-left: 0 !important; margin-right: $val !important; }
+        .me#{$suffix} { margin-right: 0 !important; margin-left: $val !important; }
+        .ps#{$suffix} { padding-left: 0 !important; padding-right: $val !important; }
+        .pe#{$suffix} { padding-right: 0 !important; padding-left: $val !important; }
+      }
+    } @else {
+      @media (min-width: $bp) {
+        html[dir="rtl"] {
+          .ms#{$suffix} { margin-left: 0 !important; margin-right: $val !important; }
+          .me#{$suffix} { margin-right: 0 !important; margin-left: $val !important; }
+          .ps#{$suffix} { padding-left: 0 !important; padding-right: $val !important; }
+          .pe#{$suffix} { padding-right: 0 !important; padding-left: $val !important; }
+        }
+      }
+    }
+  }
+}
+
+/* --- Auto margins -------------------------------------------------------- */
+@each $infix, $bp in $breakpoints {
+  @if $bp == null {
+    html[dir="rtl"] {
+      .ms#{$infix}auto { margin-left: 0 !important; margin-right: auto !important; }
+      .me#{$infix}auto { margin-right: 0 !important; margin-left: auto !important; }
+    }
+  } @else {
+    @media (min-width: $bp) {
+      html[dir="rtl"] {
+        .ms#{$infix}auto { margin-left: 0 !important; margin-right: auto !important; }
+        .me#{$infix}auto { margin-right: 0 !important; margin-left: auto !important; }
+      }
+    }
+  }
+}
+
+/* --- Floats, text alignment, positioning --------------------------------- */
+html[dir="rtl"] {
+  .float-start {
+    float: right !important;
+  }
+
+  .float-end {
+    float: left !important;
+  }
+
+  .text-start {
+    text-align: right !important;
+  }
+
+  .text-end {
+    text-align: left !important;
+  }
+
+  .start-0 {
+    inset-inline-start: 0 !important;
+    left: auto !important;
+  }
+
+  .end-0 {
+    inset-inline-end: 0 !important;
+    right: auto !important;
+  }
+
+  .border-start {
+    border-left: 0 !important;
+    border-right: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color) !important;
+  }
+
+  .border-end {
+    border-right: 0 !important;
+    border-left: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color) !important;
+  }
+
+  .rounded-start {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-top-right-radius: var(--bs-border-radius-top-right) !important;
+    border-bottom-right-radius: var(--bs-border-radius-bottom-right) !important;
+  }
+
+  .rounded-end {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-top-left-radius: var(--bs-border-radius-top-left) !important;
+    border-bottom-left-radius: var(--bs-border-radius-bottom-left) !important;
+  }
+}
+
+/* ==========================================================================
+   Bootstrap component internals
+   ========================================================================== */
+html[dir="rtl"] {
+
+  /* Dropdown menus align to the opposite corner. */
+  .dropdown-menu-start {
+    right: 0;
+    left: auto;
+  }
+
+  .dropdown-menu-end {
+    left: 0;
+    right: auto;
+  }
+
+  .dropdown-toggle::after {
+    margin-left: 0;
+    margin-right: 0.255em;
+  }
+
+  .dropdown-toggle:empty::after {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  /* Forms: checkbox / radio / switch sit on the right. */
+  .form-check {
+    padding-left: 0;
+    padding-right: 1.5em;
+  }
+
+  .form-check .form-check-input {
+    float: right;
+    margin-left: 0;
+    margin-right: -1.5em;
+  }
+
+  .form-check-inline .form-check-input {
+    margin-right: 0.375em;
+  }
+
+  .form-switch .form-check-input {
+    margin-left: 0;
+  }
+
+  .form-select {
+    background-position: left 0.75rem center;
+    padding-left: 2.25rem;
+    padding-right: 0.75rem;
+  }
+
+  .input-group-text {
+    border-radius: inherit;
+  }
+
+  .input-group > :not(:first-child):not(.dropdown-menu):not(.valid-tooltip):not(.valid-feedback):not(.invalid-tooltip):not(.invalid-feedback) {
+    margin-left: -1px;
+    margin-right: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+  }
+
+  .input-group > :not(:last-child):not(.dropdown-menu):not(.valid-tooltip):not(.valid-feedback):not(.invalid-tooltip):not(.invalid-feedback) {
+    margin-right: -1px;
+    margin-left: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+
+  /* Modal / offcanvas close buttons move to the inline end. */
+  .modal-header .btn-close {
+    margin: -0.5rem -0.5rem -0.5rem auto;
+  }
+
+  .offcanvas-start {
+    left: auto;
+    right: 0;
+    transform: translateX(100%);
+  }
+
+  .offcanvas-start.showing,
+  .offcanvas-start.show {
+    transform: none;
+  }
+
+  .offcanvas-end {
+    right: auto;
+    left: 0;
+    transform: translateX(-100%);
+  }
+
+  .offcanvas-end.showing,
+  .offcanvas-end.show {
+    transform: none;
+  }
+
+  /* Breadcrumb separator flips to a backslash. */
+  .breadcrumb-item + .breadcrumb-item {
+    padding-left: 0.5rem;
+    padding-right: 0;
+  }
+
+  .breadcrumb-item + .breadcrumb-item::before {
+    content: "\\";
+    float: right;
+    padding-left: 0.5rem;
+    padding-right: 0;
+  }
+
+  /* Pagination collapses borders on the correct side. */
+  .page-item:not(:first-child) .page-link {
+    margin-left: 0;
+    margin-right: calc(-1 * var(--bs-border-width));
+  }
+
+  /* Accordion chevron sits at the inline end. */
+  .accordion-button::after {
+    margin-left: 0;
+    margin-right: auto;
+  }
+
+  /* Card header tab bars. */
+  .card-header-tabs {
+    margin-right: -0.625rem;
+    margin-bottom: -0.75rem;
+    margin-left: -0.625rem;
+    border-bottom: 0;
+  }
+
+  .card-header-tabs .nav-link {
+    margin-bottom: -0.75rem;
+  }
+
+  /* Validation icons in feedback blocks. */
+  .was-validated .form-check-input:invalid ~ .invalid-feedback,
+  .was-validated .form-check-input:invalid ~ .invalid-tooltip,
+  .form-check-input.is-invalid ~ .invalid-feedback,
+  .form-check-input.is-invalid ~ .invalid-tooltip {
+    padding-right: 0;
+  }
+}
+
+/* ==========================================================================
+   Third-party widgets
+   ========================================================================== */
+
+/* SweetAlert2 reads the computed direction of its container and applies its own
+   `swal2-rtl` styles, so no overrides are needed here. */
+
+/* ngx-toastr positions are physical; mirror them for Arabic. */
+html[dir="rtl"] {
+  .toast-container.toast-top-right,
+  .toast-container.toast-bottom-right {
+    right: auto;
+    left: 20px;
+  }
+
+  .toast-container.toast-top-left,
+  .toast-container.toast-bottom-left {
+    right: 20px;
+    left: auto;
+  }
+
+  .toast-container {
+    padding: 0;
+  }
+}
+
+/* ==========================================================================
+   Accessibility
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
